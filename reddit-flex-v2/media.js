@@ -109,16 +109,23 @@
   }
 
   // ---- sizing -----------------------------------------------------------------------------
+  // Galleries are scaled as a whole with CSS zoom: their own layout (arrows, dots, image fit)
+  // stays intact. Videos and single images are resized directly.
   function register(el) {
-    const rec = {el, floating: false, w: null, h: null, shift: 0, wide: null};
+    const rec = {el, floating: false, w: null, h: null, shift: 0, wide: null, zoom: !!el.querySelector('gallery-carousel')};
     recs.set(el, rec);
     return rec;
   }
 
   function size(rec, w, h, cx) {
     const el = rec.el;
-    if (!el.hasAttribute('data-rf-sized')) {
-      el.setAttribute('data-rf-sized', '');
+    const attr = rec.zoom ? 'data-rf-zoomed' : 'data-rf-sized';
+    if (!el.hasAttribute(attr)) {
+      if (rec.zoom) {
+        if (!rec.bw) { const r = el.getBoundingClientRect(); rec.bw = r.width; rec.bh = r.height; } // natural size at zoom 1
+        el.style.setProperty('--rf-base-w', `${rec.bw}px`);
+      }
+      el.setAttribute(attr, '');
       rec.wide = [];
       for (let p = el.parentElement; p && p.id !== 'main-content' && p !== document.body; p = p.parentElement) {
         p.setAttribute('data-rf-wide-ancestor', '');
@@ -137,6 +144,22 @@
         n.style.setProperty('contain', 'none', 'important');
         rec.unclipped.push([n, old]);
       }
+    }
+    if (rec.zoom) {
+      // Zoom keeps proportions; lengths set on a zoomed element are multiplied by the zoom.
+      const k = w / rec.bw;
+      h = rec.bh * k;
+      el.style.setProperty('--rf-zoom', String(k));
+      rec.w = w; rec.h = h;
+      if (!rec.floating) {
+        const r = el.getBoundingClientRect();
+        const naturalLeft = r.left - rec.shift;          // where it sits with no margin
+        const center = naturalLeft + rec.bw / 2;          // the column's center
+        const left = clamp(center - w / 2, GAP, innerWidth - GAP - w);
+        rec.shift = Math.round(left - naturalLeft);
+        el.style.setProperty('--rf-zoom-ml', `${rec.shift / k}px`);
+      }
+      return;
     }
     el.style.setProperty('--rf-media-w', `${w}px`);
     el.style.setProperty('--rf-media-h', `${h}px`);
@@ -157,7 +180,8 @@
   function unsize(rec) {
     const el = rec.el;
     el.removeAttribute('data-rf-sized');
-    for (const name of ['--rf-media-w', '--rf-media-h', '--rf-media-shift']) el.style.removeProperty(name);
+    el.removeAttribute('data-rf-zoomed');
+    for (const name of ['--rf-media-w', '--rf-media-h', '--rf-media-shift', '--rf-zoom', '--rf-zoom-ml', '--rf-base-w']) el.style.removeProperty(name);
     for (const p of rec.wide || []) p.removeAttribute('data-rf-wide-ancestor');
     for (const [n, old] of rec.unclipped || []) {
       for (const [prop, [value, priority]] of Object.entries(old)) {
@@ -169,8 +193,9 @@
 
   function place(rec, x, y) {
     const r = rec.el.getBoundingClientRect();
-    rec.el.style.setProperty('--rf-x', `${Math.round(clamp(x, GAP, innerWidth - r.width - GAP))}px`);
-    rec.el.style.setProperty('--rf-y', `${Math.round(clamp(y, GAP, innerHeight - r.height - GAP))}px`);
+    const k = rec.zoom && rec.w ? rec.w / rec.bw : 1; // left/top get multiplied by zoom too
+    rec.el.style.setProperty('--rf-x', `${clamp(x, GAP, innerWidth - r.width - GAP) / k}px`);
+    rec.el.style.setProperty('--rf-y', `${clamp(y, GAP, innerHeight - r.height - GAP) / k}px`);
   }
 
   // ---- floating ---------------------------------------------------------------------------
@@ -193,6 +218,8 @@
     floating = rec;
     rec.shift = 0;
     el.style.removeProperty('--rf-media-shift');
+    el.style.removeProperty('--rf-zoom-ml');
+    if (rec.zoom && !rec.bw) { rec.bw = r.width; rec.bh = r.height; } // measure before it goes fixed
     el.setAttribute('data-rf-floating', '');
 
     let w = r.width, h = r.height;

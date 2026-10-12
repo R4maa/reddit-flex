@@ -46,6 +46,18 @@
       })()}}];
     return new Response(JSON.stringify(body), {status: 200, headers: {'content-type': 'application/json', ...rl}});
   };
+  // Carousel like Reddit's gallery-carousel: arrows live in its shadow DOM, centred vertically.
+  customElements.define('gallery-carousel', class extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({mode: 'open'}).innerHTML = `<style>
+        :host{display:block;position:relative;height:420px;overflow:hidden;border-radius:16px;background:#111}
+        .nav{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:0;background:#fffd;cursor:pointer}
+        #prev{left:10px} #next{right:10px}
+        .dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:#fff}
+      </style><slot></slot><button class="nav" id="prev">‹</button><button class="nav" id="next">›</button><div class="dots">● ○ ○</div>`;
+    }
+  });
   // Shadow-DOM card like shreddit-post, with full-card link overlay and click-to-navigate
   customElements.define('shreddit-post', class extends HTMLElement {
     constructor() {
@@ -86,6 +98,10 @@
             <a slot="title" href="/r/test/comments/vid1/v/">A video post</a>
             <div slot="post-media-container"><video id="vid" style="display:block;width:100%;aspect-ratio:16/9;background:linear-gradient(135deg,#345,#913)"></video></div>
             <a slot="actions" name="comments-action-button" href="/r/test/comments/vid1/v/">12 comments</a>
+          </shreddit-post></article>
+          <article><shreddit-post id="t3_gal1" post-type="gallery" view-context="SubredditFeed" permalink="/r/test/comments/gal1/g/">
+            <a slot="title" href="/r/test/comments/gal1/g/">A gallery post</a>
+            <div slot="post-media-container"><gallery-carousel><ul style="margin:0;padding:0;list-style:none;height:420px"><li style="height:100%"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='1000'><rect width='800' height='1000' fill='%23e7d9c4'/><circle cx='400' cy='500' r='300' fill='%23c46'/></svg>" style="width:100%;height:100%;object-fit:contain;display:block"></li></ul></gallery-carousel></div>
           </shreddit-post></article>
           <div style="height:1500px"></div>
         </shreddit-feed>

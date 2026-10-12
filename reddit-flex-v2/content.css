@@ -68,6 +68,16 @@ html.rf-dragging iframe { pointer-events: none !important; }
 [data-rf-sized] > a > img, [data-rf-sized] > img { width: 100% !important; height: 100% !important; }
 [data-rf-sized] gallery-carousel > ul { height: 100% !important; max-height: none !important; }
 
+/* Galleries: scale the whole carousel, untouched inside (keeps arrows, dots and image fit). */
+[data-rf-zoomed] {
+  zoom: var(--rf-zoom, 1) !important;
+  width: var(--rf-base-w) !important;
+  max-width: none !important;
+  margin-left: var(--rf-zoom-ml, 0px) !important;
+  position: relative;
+  z-index: 10;
+}
+
 /* ===== Floating player (top layer via the Popover API; ancestor fallback otherwise) ===== */
 [data-rf-floating] {
   position: fixed !important;
