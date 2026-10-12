@@ -717,7 +717,9 @@
   }, true);
 
   // Small API for other modules (keyboard navigation). Mirrors what a click on the card does.
+  // `fetch` is redditFetch, so other modules' Reddit requests share the same rate limiting.
   globalThis.RedditFlexAccordion = {
+    fetch: redditFetch,
     canExpand: post => s.enabled && s.accordion && eligible(post) && inFeed(post),
     isOpen: post => open.has(post),
     panel: post => open.get(post)?.panel || null,

@@ -79,6 +79,7 @@
   <h2>Media</h2>
   <div class="row"><label for="media">Resize &amp; move videos and images</label><span class="switch"><input id="media" type="checkbox"><span></span></span></div>
   <div class="row"><label for="lockRatio">Keep proportions<small>Hold Shift while dragging to flip this</small></label><span class="switch"><input id="lockRatio" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="autoplay">Autoplay videos<small>Off: videos wait until you press play</small></label><span class="switch"><input id="autoplay" type="checkbox"><span></span></span></div>
 </section>
 
 <section>
@@ -135,12 +136,13 @@
     <li>Drag the <b>orange rails</b> beside the feed; double-click one to reset.</li>
     <li>Hover media and drag a <b>corner or side handle</b> to resize past the column.</li>
     <li>Drag <b>✥ Move</b> to float a player anywhere. <b>Ctrl + scroll</b> over media zooms it.</li>
-    <li><b>Esc</b> docks a floating player. Ctrl/middle-click still opens posts in a new tab.</li>
+    <li><b>Esc</b> docks a floating player. <b>⧉ Pop out</b> remembers where you last left it.</li>
+    <li>Hover a video for <b>▣ PiP</b> and <b>↓ Download</b>. Ctrl/middle-click still opens posts in a new tab.</li>
   </ul>
 </section>
 
 <footer>
-  <button id="resetMedia" title="Put every resized or floating player back">Reset media</button>
+  <button id="resetMedia" title="Put every resized or floating player back, and forget where the floating window was">Reset media</button>
   <button id="resetAll" title="Restore all settings">Reset all</button>
 </footer>
 <script src="settings.js"></script>

@@ -43,6 +43,7 @@
     #box.dragging #grip { cursor: grabbing; }
     #size { position: absolute; right: 10px; bottom: 12px; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.75); color: #fff; font: 600 11px/1 system-ui, sans-serif; opacity: 0; transition: opacity .15s; }
     #box.dragging #size { opacity: 1; }
+    #msg { position: absolute; left: 50%; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 6px 10px; border-radius: 8px; background: rgba(18,18,20,.88); color: #fff; font: 500 12px/1.35 system-ui, sans-serif; text-align: center; pointer-events: none; }
     [hidden] { display: none !important; }
   </style>
   <div id="box" hidden>
@@ -51,7 +52,10 @@
       <button id="pop" title="Pop out into a floating window">⧉ Pop out</button>
       <button id="dock" title="Put it back in the post" hidden>⤓ Dock</button>
       <button id="reset" title="Original size">↺ Reset</button>
+      <button id="pip" title="Picture-in-picture: keep watching in a small window on top of everything" hidden>▣ PiP</button>
+      <button id="save" title="Download this video" hidden>↓ Download</button>
     </div>
+    <span id="msg" role="status" hidden></span>
     <button class="h c nw" data-dir="nw" aria-label="Resize"></button><button class="h c ne" data-dir="ne" aria-label="Resize"></button>
     <button class="h c sw" data-dir="sw" aria-label="Resize"></button><button class="h c se" data-dir="se" aria-label="Resize"></button>
     <button class="h e" data-dir="e" aria-label="Resize width"></button><button class="h w" data-dir="w" aria-label="Resize width"></button>
@@ -104,6 +108,10 @@
     $('bar').style.top = `${clamp(hb - r.top + 8, 8, r.height - 44)}px`;
     $('pop').hidden = fl;
     $('dock').hidden = !fl;
+    const video = !!globalThis.RedditFlexVideo?.has(rec.el);
+    $('pip').hidden = !video || !globalThis.RedditFlexVideo.canPip();
+    $('save').hidden = !video;
+    $('msg').style.top = `${parseFloat($('bar').style.top) + 40}px`;
     $('size').textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
     box.classList.add('show');
   }
@@ -199,6 +207,27 @@
   }
 
   // ---- floating ---------------------------------------------------------------------------
+  // The last floating window's width and top-left corner, shared by every tab; "Reset media" forgets it.
+  const FLOAT_KEY = 'redditFlexFloat';
+  let lastFloat = null;
+  const validFloat = v => (v && [v.w, v.x, v.y].every(Number.isFinite) && v.w >= MIN_W ? {w: v.w, x: v.x, y: v.y} : null);
+  try {
+    chrome.storage.local.get(FLOAT_KEY).then(r => { lastFloat = validFloat(r[FLOAT_KEY]); }, () => {});
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && changes[FLOAT_KEY]) lastFloat = validFloat(changes[FLOAT_KEY].newValue);
+    });
+  } catch {}
+  function rememberFloat(rec) {
+    if (!rec?.floating || !rec.el.isConnected) return;
+    const r = rec.el.getBoundingClientRect();
+    lastFloat = {w: Math.round(r.width), x: Math.round(r.left), y: Math.round(r.top)};
+    try { chrome.storage.local.set({[FLOAT_KEY]: lastFloat}).catch(() => {}); } catch {} // extension reloaded
+  }
+  function forgetFloat() {
+    lastFloat = null;
+    try { chrome.storage.local.remove(FLOAT_KEY).catch(() => {}); } catch {}
+  }
+
   function floatMedia(rec, corner) {
     if (rec.floating) return;
     if (floating) dock(floating);
@@ -222,12 +251,15 @@
     if (rec.zoom && !rec.bw) { rec.bw = r.width; rec.bh = r.height; } // measure before it goes fixed
     el.setAttribute('data-rf-floating', '');
 
+    // Popping out uses the last floating window's width and spot (kept to the window), or a corner.
     let w = r.width, h = r.height;
-    if (corner) { const k = Math.min(560, innerWidth * 0.42) / w; w *= k; h *= k; }
+    if (corner) { const k = (lastFloat ? lastFloat.w : Math.min(560, innerWidth * 0.42)) / w; w *= k; h *= k; }
     const fit = Math.min(1, (innerWidth - 2 * GAP) / w, (innerHeight - 2 * GAP) / h);
     w *= fit; h *= fit;
     size(rec, w, h);
-    place(rec, corner ? innerWidth - w - 24 : r.left, corner ? innerHeight - h - 24 : r.top);
+    if (!corner) place(rec, r.left, r.top);
+    else if (lastFloat) place(rec, lastFloat.x, lastFloat.y);
+    else place(rec, innerWidth - w - 24, innerHeight - h - 24);
 
     rec.popover = false;
     if (canPopover) {
@@ -356,7 +388,7 @@
         }
         size(rec, w, h, cx);
         if (rec.floating) place(rec, west ? r.right - w : r.left, north ? r.bottom - h : r.top);
-      });
+      }, () => rememberFloat(rec));
     });
     handle.addEventListener('dblclick', () => reset(active));
     handle.addEventListener('keydown', e => {
@@ -367,6 +399,7 @@
       const w = clamp(r.width + d, MIN_W, innerWidth - 2 * GAP);
       size(active, w, w * r.height / r.width);
       if (active.floating) place(active, r.left, r.top);
+      rememberFloat(active);
       update();
     });
   }
@@ -384,7 +417,7 @@
         dx = x0 - r.left; dy = y0 - r.top;
       }
       place(rec, m.clientX - dx, m.clientY - dy);
-    }, () => { if (!moved && !rec.floating) floatMedia(rec, true); });
+    }, () => { if (!moved && !rec.floating) floatMedia(rec, true); else rememberFloat(rec); });
   });
   $('grip').addEventListener('keydown', e => {
     if (!active || !e.key.startsWith('Arrow')) return;
@@ -392,11 +425,33 @@
     floatMedia(active);
     const r = active.el.getBoundingClientRect(), d = e.shiftKey ? 80 : 20;
     place(active, r.left + (e.key === 'ArrowRight' ? d : e.key === 'ArrowLeft' ? -d : 0), r.top + (e.key === 'ArrowDown' ? d : e.key === 'ArrowUp' ? -d : 0));
+    rememberFloat(active);
     update();
   });
   $('pop').addEventListener('click', () => active && floatMedia(active, true));
   $('dock').addEventListener('click', () => dock(active));
   $('reset').addEventListener('click', () => reset(active));
+
+  let msgTimer = 0;
+  function say(text, ms = 4500) {
+    clearTimeout(msgTimer);
+    $('msg').textContent = text;
+    $('msg').hidden = !text;
+    if (text && ms) msgTimer = setTimeout(() => { $('msg').hidden = true; }, ms);
+  }
+  $('pip').addEventListener('click', () => {
+    if (!active) return;
+    globalThis.RedditFlexVideo.togglePip(active.el).catch(e => say(e.message || 'Picture-in-picture is not available here'));
+  });
+  $('save').addEventListener('click', async () => {
+    if (!active || $('save').disabled) return;
+    $('save').disabled = true;
+    say('Getting the video…', 0);
+    try {
+      const res = await globalThis.RedditFlexVideo.download(active.el);
+      say(!res.ok ? res.error : res.complete ? 'Download started' : 'Download started, without sound: Reddit keeps this video\'s sound in a separate file', res.complete ? 3000 : 7000);
+    } finally { $('save').disabled = false; }
+  });
 
   // ---- page events ------------------------------------------------------------------------
   function mediaIn(path, x, y) {
@@ -433,6 +488,7 @@
   }, {capture: true, passive: true});
 
   // Ctrl + wheel over media zooms it smoothly.
+  let wheelTimer = 0;
   document.addEventListener('wheel', e => {
     if (!e.ctrlKey || !s.enabled || !s.media) return;
     const el = mediaIn(e.composedPath(), e.clientX, e.clientY);
@@ -442,7 +498,11 @@
     const maxH = rec.floating ? innerHeight - 2 * GAP : 4000;
     const w = clamp(r.width * Math.exp(-e.deltaY * 0.0015), MIN_W, Math.min(innerWidth - 2 * GAP, maxH * ratio));
     size(rec, w, w / ratio);
-    if (rec.floating) place(rec, r.left + (r.width - w) / 2, r.top + (r.height - w / ratio) / 2);
+    if (rec.floating) {
+      place(rec, r.left + (r.width - w) / 2, r.top + (r.height - w / ratio) / 2);
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => rememberFloat(rec), 300);
+    }
     active = rec;
     update();
   }, {passive: false, capture: true});
@@ -502,5 +562,5 @@
     s = next;
     if (!s.enabled || !s.media) resetAll();
     update();
-  }, resetAll);
+  }, () => { forgetFloat(); resetAll(); });
 })();

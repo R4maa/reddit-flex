@@ -16,6 +16,7 @@
     hideLeft: false,
     media: true,
     lockRatio: true,
+    autoplay: true,
     accordion: true,
     allPosts: true,
     prefetch: true,
