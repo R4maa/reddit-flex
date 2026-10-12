@@ -302,3 +302,7 @@ html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > art
 html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > article:has(> shreddit-post[user-logged-in]:not([is-subscribed])) + hr { display: none !important; }
 /* The "Award" button under comments (posts already hide theirs). */
 html.rf-enabled.rf-hide-awards award-button { display: none !important; }
+/* Header scrolls away with the page instead of staying on top (Reddit fixes it to the top). */
+html.rf-enabled.rf-unstick-header reddit-header-large { position: absolute !important; }
+/* ...and the left navigation, fixed just below it, follows its visible bottom edge (polish.js sets --rf-head). */
+html.rf-enabled.rf-unstick-header #flex-left-nav-container { top: var(--rf-head, 56px) !important; height: calc(100vh - var(--rf-head, 56px)) !important; }

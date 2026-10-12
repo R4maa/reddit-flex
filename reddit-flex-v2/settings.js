@@ -42,6 +42,9 @@
     hideRecommended: false,
     hideTrending: false,
     hideAwards: false,
+    scrollToTop: true,
+    unstickHeader: false,
+    exactTimes: true,
   });
 
   // Validates one value against the type of its default: booleans, clamped numbers, enums,
