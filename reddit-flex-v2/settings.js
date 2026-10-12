@@ -5,13 +5,17 @@
   const RESET_KEY = 'redditFlexReset';
   const MIN_W = 420, MAX_W = 2400;
   // Numeric settings are clamped to these ranges (nested keys use dots, e.g. 'widths.home').
-  const RANGES = {width: [MIN_W, MAX_W], commentsHeight: [180, 1400]};
+  const PAGE_TYPES = ['home', 'subreddit', 'post', 'other'];
+  const RANGES = {width: [MIN_W, MAX_W], commentsHeight: [180, 1400], ...Object.fromEntries(PAGE_TYPES.map(t => [`widths.${t}`, [MIN_W, MAX_W]]))};
   // Settings limited to a fixed set of values; the first one listed is the fallback.
   // commentSort uses the values of Reddit's `sort` parameter; 'confidence' is "Best".
   const ENUMS = {commentSort: ['confidence', 'top', 'new', 'controversial', 'old', 'qa']};
   const defaults = Object.freeze({
     enabled: true,
     width: 900,
+    // Off: one width everywhere. On: each page type keeps its own (see pageType).
+    widthPerPage: false,
+    widths: Object.freeze({home: 900, subreddit: 900, post: 900, other: 900}),
     hideRight: false,
     hideLeft: false,
     media: true,
@@ -139,6 +143,18 @@
     } catch {}
   }
 
+  // Which width a page uses when "Width per page type" is on. Front-page feeds (including
+  // r/popular and r/all) are home; a post's own page is post; the rest of /r/ is subreddit.
+  function pageType(path) {
+    const p = String(path || '/').toLowerCase();
+    if (/^\/(?:(?:r|u|user)\/[^/]+\/)?comments\//.test(p)) return 'post';
+    if (/^\/(?:(?:best|hot|new|top|rising)\/?)?$/.test(p) || /^\/r\/(?:popular|all)(?:\/|$)/.test(p)) return 'home';
+    if (/^\/r\/[^/]+/.test(p)) return 'subreddit';
+    return 'other';
+  }
+  // The column width settings `s` give a page of type `type`.
+  const widthFor = (s, type) => (s.widthPerPage ? s.widths[type] : s.width);
+
   function headerBottom() {
     const header = document.querySelector('reddit-header-large, header');
     const bottom = header?.getBoundingClientRect().bottom;
@@ -170,5 +186,5 @@
     return total > 0 && covered / total > .5;
   }
 
-  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, parsePattern, makeFilter, filterKey, MIN_W, MAX_W, RANGES, ENUMS};
+  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, parsePattern, makeFilter, filterKey, pageType, widthFor, PAGE_TYPES, MIN_W, MAX_W, RANGES, ENUMS};
 })();

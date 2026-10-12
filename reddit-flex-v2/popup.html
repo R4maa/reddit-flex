@@ -28,6 +28,7 @@
   .width-head output { font-variant-numeric: tabular-nums; font-weight: 700; }
   input[type=range] { width: 100%; accent-color: var(--accent); margin: 8px 0 6px; }
   .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .presets[hidden] { display: none; }
   button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 7px 6px; transition: background .12s, border-color .12s; }
   button:hover { border-color: var(--accent); }
   button.on { background: var(--accent-soft); border-color: var(--accent); }
@@ -70,6 +71,13 @@
     <button data-width="900">Default</button>
     <button data-width="1200">Wide</button>
     <button data-width="1600">Ultra</button>
+  </div>
+  <div class="row"><label for="widthPerPage">Width per page type<small>Home, subreddits, posts and other pages each keep their own width</small></label><span class="switch"><input id="widthPerPage" type="checkbox"><span></span></span></div>
+  <div class="presets" id="pageTypes" role="group" aria-label="Page type the width applies to" hidden>
+    <button data-type="home">Home</button>
+    <button data-type="subreddit">Subreddit</button>
+    <button data-type="post">Post</button>
+    <button data-type="other">Other</button>
   </div>
   <div class="row"><label for="hideRight">Hide right sidebar</label><span class="switch"><input id="hideRight" type="checkbox"><span></span></span></div>
   <div class="row"><label for="hideLeft">Hide left navigation</label><span class="switch"><input id="hideLeft" type="checkbox"><span></span></span></div>
