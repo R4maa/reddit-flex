@@ -1,4 +1,4 @@
-# Reddit Flex 2.8
+# Reddit Flex 2.6
 
 A Chrome extension that makes the current Reddit desktop site (www.reddit.com) more flexible to use.
 
@@ -20,7 +20,6 @@ A Chrome extension that makes the current Reddit desktop site (www.reddit.com) m
 ### Videos and images
 - Hover media to show the handles. Drag a **corner** or **side handle** to resize it. Inline media grows around its center and can extend **past the column**, over the sidebars. It only shifts sideways when it reaches the edge of the window.
 - Proportions stay locked by default. Hold **Shift** while dragging to resize freely, or change the default in the popup.
-- Resizing follows the picture's own shape, so black or blurred borders are trimmed away. **✂ Trim** removes them without resizing, and galleries re-trim when you change slides. While dragging, the size readout shows the source resolution, e.g. `400 × 600 · 67% of 600 × 900`.
 - **Ctrl + scroll** over media zooms it smoothly.
 - **✥ Move**: drag it to turn the player into a floating window you can put anywhere. Clicking it, or clicking **⧉ Pop out**, sends the player to the bottom-right corner. Resize a floating player from its corners.
 - The floating player stays in place while you scroll the feed. A placeholder marks its spot in the post; click the placeholder, press **⤓ Dock**, or press **Esc** to put it back.
