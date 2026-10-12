@@ -17,6 +17,10 @@
 <script>
   window.chrome = {storage: {local: {get: async () => ({}), set: async () => {}}, onChanged: {addListener() {}}}};
   window.__clicks = [];
+  // Any script error lands here so tests can assert none happened.
+  window.__errors = [];
+  addEventListener('error', e => window.__errors.push(e.message));
+  addEventListener('unhandledrejection', e => window.__errors.push(String(e.reason)));
   // Fake reddit .json endpoint
   const realFetch = window.fetch;
   // Fake rate limiting: set __rate.remaining / __rate.force429 from tests; requests are logged.

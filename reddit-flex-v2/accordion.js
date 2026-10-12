@@ -347,7 +347,7 @@
     done.finally(() => delete c.dataset.animating);
     // Keep the collapsed comment's header in view inside the comment box.
     const box = c.closest('.rf-acc-comments');
-    if (collapsed && box) {
+    if (collapsing && box) {
       const top = c.getBoundingClientRect().top - box.getBoundingClientRect().top;
       if (top < 0) box.scrollBy({top: top - 8, behavior: reduceMotion.matches ? 'auto' : 'smooth'});
     }
@@ -374,7 +374,11 @@
     if (clipY) node.style.clipPath = 'inset(0 -200px 0 -200px)'; else node.style.overflow = 'hidden';
     const duration = Math.min(460, 180 + Math.abs(to - from) * 0.22);
     const anim = node.animate([{height: `${from}px`}, {height: `${to}px`}], {duration, easing: 'cubic-bezier(.22,.8,.24,1)'});
-    return anim.finished.catch(() => {}).finally(() => { node.style.overflow = ''; node.style.clipPath = ''; });
+    // `finished` only settles on a rendered frame, which never comes in a hidden tab; a timer
+    // guarantees cleanup (and collapse/removal) still happens.
+    const timer = new Promise(resolve => setTimeout(resolve, duration + 60));
+    return Promise.race([anim.finished.catch(() => {}), timer])
+      .finally(() => { node.style.overflow = ''; node.style.clipPath = ''; });
   }
 
   function morph(node, animate, change) {
