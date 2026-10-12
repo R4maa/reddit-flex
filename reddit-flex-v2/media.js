@@ -50,6 +50,7 @@
       <button id="grip" title="Drag to move it anywhere · click to pop out">✥ Move</button>
       <button id="pop" title="Pop out into a floating window">⧉ Pop out</button>
       <button id="dock" title="Put it back in the post" hidden>⤓ Dock</button>
+      <button id="trim" title="Cut away the borders around the picture">✂ Trim</button>
       <button id="reset" title="Original size">↺ Reset</button>
     </div>
     <button class="h c nw" data-dir="nw" aria-label="Resize"></button><button class="h c ne" data-dir="ne" aria-label="Resize"></button>
@@ -104,7 +105,9 @@
     $('bar').style.top = `${clamp(hb - r.top + 8, 8, r.height - 44)}px`;
     $('pop').hidden = fl;
     $('dock').hidden = !fl;
-    $('size').textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+    const src = box.classList.contains('dragging') ? source(rec.el) : null;
+    $('size').textContent = `${Math.round(r.width)} × ${Math.round(r.height)}` +
+      (src ? ` · ${Math.round(r.width / src.w * 100)}% of ${src.w} × ${src.h}` : '');
     box.classList.add('show');
   }
 
@@ -117,12 +120,70 @@
     return rec;
   }
 
+  // ---- the real picture inside Reddit's frame ----------------------------------------------
+  function deepAll(root, sel, out = []) {
+    out.push(...root.querySelectorAll(sel));
+    for (const n of root.querySelectorAll('*')) if (n.shadowRoot) deepAll(n.shadowRoot, sel, out);
+    return out;
+  }
+  // Native size of what's actually showing: the video's resolution, or the visible image
+  // (skipping Reddit's blurred backdrop copy). Null until it has loaded.
+  function source(el) {
+    const video = deepAll(el, 'video').find(v => v.videoWidth);
+    if (video) return {w: video.videoWidth, h: video.videoHeight};
+    const m = el.getBoundingClientRect();
+    let best = null, area = 0;
+    for (const img of deepAll(el, 'img')) {
+      if (!img.naturalWidth || img.getAttribute('role') === 'presentation' || getComputedStyle(img).filter.includes('blur')) continue;
+      const r = img.getBoundingClientRect();
+      const a = Math.max(0, Math.min(r.right, m.right) - Math.max(r.left, m.left)) * Math.max(0, Math.min(r.bottom, m.bottom) - Math.max(r.top, m.top));
+      if (a > area) { area = a; best = img; }
+    }
+    return best ? {w: best.naturalWidth, h: best.naturalHeight} : null;
+  }
+  // Resizing follows the picture's own shape, so the frame hugs it with no borders.
+  const ratioOf = (rec, r) => { const src = source(rec.el); return src ? src.w / src.h : r.width / r.height; };
+
+  // A gallery's frame is as wide as the column; narrow it to the current image so the
+  // side bars disappear (Reddit's frame height is kept).
+  function galleryBase(rec, r) {
+    rec.colW = r.width; rec.bh = r.height;
+    const src = source(rec.el);
+    rec.bw = src ? Math.min(r.width, r.height * src.w / src.h) : r.width;
+  }
+  function refitGallery(rec) {
+    if (!rec.zoom || !rec.w || !rec.el.isConnected) return;
+    const src = source(rec.el);
+    if (!src) return;
+    const k = rec.w / rec.bw, nb = Math.min(rec.colW, rec.bh * src.w / src.h);
+    if (Math.abs(nb - rec.bw) < 2) return;
+    const before = rec.el.getBoundingClientRect();
+    rec.bw = nb;
+    rec.el.style.setProperty('--rf-base-w', `${nb}px`);
+    size(rec, nb * k, rec.bh * k);
+    if (rec.floating) place(rec, before.left + (before.width - nb * k) / 2, before.top);
+    update();
+  }
+
+  // Before the first resize, shrink the frame to the visible picture (same on-screen size,
+  // borders removed) so dragging starts from the picture, not Reddit's frame.
+  function prime(rec) {
+    const el = rec.el, r = el.getBoundingClientRect();
+    if (rec.w || rec.floating) return r;
+    if (rec.zoom) { galleryBase(rec, r); size(rec, rec.bw, rec.bh); }
+    else {
+      const ratio = ratioOf(rec, r), w = Math.min(r.width, r.height * ratio);
+      size(rec, w, w / ratio);
+    }
+    return el.getBoundingClientRect();
+  }
+
   function size(rec, w, h, cx) {
     const el = rec.el;
     const attr = rec.zoom ? 'data-rf-zoomed' : 'data-rf-sized';
     if (!el.hasAttribute(attr)) {
       if (rec.zoom) {
-        if (!rec.bw) { const r = el.getBoundingClientRect(); rec.bw = r.width; rec.bh = r.height; } // natural size at zoom 1
+        if (!rec.bw) galleryBase(rec, el.getBoundingClientRect()); // natural size at zoom 1
         el.style.setProperty('--rf-base-w', `${rec.bw}px`);
       }
       el.setAttribute(attr, '');
@@ -154,7 +215,7 @@
       if (!rec.floating) {
         const r = el.getBoundingClientRect();
         const naturalLeft = r.left - rec.shift;          // where it sits with no margin
-        const center = naturalLeft + rec.bw / 2;          // the column's center
+        const center = naturalLeft + (rec.colW || rec.bw) / 2; // the column's center
         const left = clamp(center - w / 2, GAP, innerWidth - GAP - w);
         rec.shift = Math.round(left - naturalLeft);
         el.style.setProperty('--rf-zoom-ml', `${rec.shift / k}px`);
@@ -189,6 +250,7 @@
       }
     }
     rec.wide = rec.unclipped = null; rec.w = rec.h = null; rec.shift = 0;
+    rec.bw = rec.bh = rec.colW = null; // re-measured on the next resize
   }
 
   function place(rec, x, y) {
@@ -219,10 +281,12 @@
     rec.shift = 0;
     el.style.removeProperty('--rf-media-shift');
     el.style.removeProperty('--rf-zoom-ml');
-    if (rec.zoom && !rec.bw) { rec.bw = r.width; rec.bh = r.height; } // measure before it goes fixed
+    if (rec.zoom && !rec.bw) galleryBase(rec, r); // measure before it goes fixed
     el.setAttribute('data-rf-floating', '');
 
     let w = r.width, h = r.height;
+    if (rec.zoom) { w = rec.w || rec.bw; h = rec.h || rec.bh; }
+    else { const ratio = ratioOf(rec, r); w = Math.min(r.width, r.height * ratio); h = w / ratio; }
     if (corner) { const k = Math.min(560, innerWidth * 0.42) / w; w *= k; h *= k; }
     const fit = Math.min(1, (innerWidth - 2 * GAP) / w, (innerHeight - 2 * GAP) / h);
     w *= fit; h *= fit;
@@ -335,7 +399,7 @@
     const dir = handle.dataset.dir;
     handle.addEventListener('pointerdown', e => {
       if (e.button !== 0 || !active) return;
-      const rec = active, r = rec.el.getBoundingClientRect(), ratio = r.width / r.height;
+      const rec = active, r = prime(rec), ratio = ratioOf(rec, r);
       const x0 = e.clientX, y0 = e.clientY;
       const west = dir.includes('w'), north = dir.includes('n'), widthOnly = dir === 'e' || dir === 'w';
       const k = rec.floating ? 1 : 2; // inline media grows on both sides at once
@@ -397,6 +461,16 @@
   $('pop').addEventListener('click', () => active && floatMedia(active, true));
   $('dock').addEventListener('click', () => dock(active));
   $('reset').addEventListener('click', () => reset(active));
+  $('trim').addEventListener('click', () => {
+    if (!active) return;
+    if (active.zoom) { if (active.w) refitGallery(active); else prime(active); }
+    else {
+      const r = active.el.getBoundingClientRect(), ratio = ratioOf(active, r), w = Math.min(r.width, r.height * ratio);
+      size(active, w, w / ratio);
+      if (active.floating) place(active, r.left + (r.width - w) / 2, r.top + (r.height - w / ratio) / 2);
+    }
+    update();
+  });
 
   // ---- page events ------------------------------------------------------------------------
   function mediaIn(path, x, y) {
@@ -438,7 +512,7 @@
     const el = mediaIn(e.composedPath(), e.clientX, e.clientY);
     if (!el) return;
     e.preventDefault();
-    const rec = recs.get(el) || register(el), r = el.getBoundingClientRect(), ratio = r.width / r.height;
+    const rec = recs.get(el) || register(el), r = prime(rec), ratio = ratioOf(rec, r);
     const maxH = rec.floating ? innerHeight - 2 * GAP : 4000;
     const w = clamp(r.width * Math.exp(-e.deltaY * 0.0015), MIN_W, Math.min(innerWidth - 2 * GAP, maxH * ratio));
     size(rec, w, w / ratio);
@@ -446,6 +520,13 @@
     active = rec;
     update();
   }, {passive: false, capture: true});
+
+  // Switching gallery slides can change the image's shape; re-trim once it has slid in.
+  addEventListener('click', e => {
+    const el = mediaIn(e.composedPath());
+    const rec = el && recs.get(el);
+    if (rec?.zoom && rec.w) for (const ms of [350, 800]) setTimeout(() => refitGallery(rec), ms);
+  }, true);
 
   // Clicking the placeholder docks the player instead of opening the post.
   window.addEventListener('click', e => {
