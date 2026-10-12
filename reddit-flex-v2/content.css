@@ -258,3 +258,6 @@ html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !impo
   .rf-skel { animation: none; }
   html.rf-animate #subgrid-container, html.rf-animate .main-container:has(> #main-content) { transition: none !important; }
 }
+
+/* ===== Keyboard navigation ===== */
+shreddit-post[data-rf-kbd] { outline: 2px solid #ff4500 !important; outline-offset: 3px; border-radius: 16px; }

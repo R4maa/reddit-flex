@@ -566,6 +566,24 @@
     RF.save(s);
   }, true);
 
+  // Small API for other modules (keyboard navigation). Mirrors what a click on the card does.
+  globalThis.RedditFlexAccordion = {
+    canExpand: post => s.enabled && s.accordion && eligible(post) && inFeed(post),
+    isOpen: post => open.has(post),
+    panel: post => open.get(post)?.panel || null,
+    toggle(post, {comments = false} = {}) {
+      if (!this.canExpand(post)) return false;
+      if (open.has(post)) {
+        // With `comments`, only the comments toggle (like the panel's own button); otherwise the post does.
+        if (!comments) collapse(post);
+        else if (open.get(post).comments) hideComments(post);
+        else showComments(post);
+        return true;
+      }
+      return expand(post, comments);
+    },
+  };
+
   RF.subscribe(next => {
     s = next;
     setBoxHeight(s.commentsHeight);

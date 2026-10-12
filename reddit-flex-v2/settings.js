@@ -4,7 +4,10 @@
   const KEY = 'redditFlex';
   const RESET_KEY = 'redditFlexReset';
   const MIN_W = 420, MAX_W = 2400;
+  // Numeric settings are clamped to these ranges (nested keys use dots, e.g. 'widths.home').
   const RANGES = {width: [MIN_W, MAX_W], commentsHeight: [180, 1400]};
+  // Settings limited to a fixed set of values; the first one listed is the fallback.
+  const ENUMS = {};
   const defaults = Object.freeze({
     enabled: true,
     width: 900,
@@ -17,19 +20,35 @@
     prefetch: true,
     autoComments: false,
     commentsHeight: 440,
+    keyboard: false,
   });
 
-  function normalize(value) {
-    const out = {...defaults};
-    if (!value || typeof value !== 'object') return out;
-    for (const key of Object.keys(defaults)) {
-      if (RANGES[key]) {
-        const n = Number(value[key]), [min, max] = RANGES[key];
-        if (Number.isFinite(n)) out[key] = Math.round(Math.min(max, Math.max(min, n)));
-      } else if (typeof value[key] === 'boolean') {
-        out[key] = value[key];
-      }
+  // Validates one value against the type of its default: booleans, clamped numbers, enums,
+  // lists of strings, and nested objects. Anything unexpected falls back to the default.
+  function normalizeValue(def, value, key) {
+    if (Object.hasOwn(RANGES, key)) {
+      const n = Number(value), [min, max] = RANGES[key];
+      return Number.isFinite(n) ? Math.round(Math.min(max, Math.max(min, n))) : def;
     }
+    if (Object.hasOwn(ENUMS, key)) return ENUMS[key].includes(value) ? value : def;
+    if (typeof def === 'boolean') return typeof value === 'boolean' ? value : def;
+    if (Array.isArray(def)) {
+      if (!Array.isArray(value)) return [...def];
+      return value.filter(v => typeof v === 'string').map(v => v.trim().slice(0, 300)).filter(Boolean).slice(0, 500);
+    }
+    if (def && typeof def === 'object') {
+      const out = {};
+      for (const k of Object.keys(def)) out[k] = normalizeValue(def[k], value?.[k], `${key}.${k}`);
+      return out;
+    }
+    if (typeof def === 'number') return Number.isFinite(value) ? value : def;
+    return typeof value === typeof def ? value : def;
+  }
+
+  function normalize(value) {
+    const src = value && typeof value === 'object' ? value : {};
+    const out = {};
+    for (const key of Object.keys(defaults)) out[key] = normalizeValue(defaults[key], src[key], key);
     return out;
   }
 
@@ -68,7 +87,9 @@
 
   // True when something (Reddit's image viewer, a dialog, a menu) sits on top of `el`.
   // Checks a few points so a small popup over one corner doesn't count.
-  function isCovered(el, scope = el) {
+  // `ignoreFloating` treats our floating players as transparent (keyboard nav wants that;
+  // the rails and inline media handles should still hide under them).
+  function isCovered(el, scope = el, {ignoreFloating = false} = {}) {
     const r = el?.getBoundingClientRect();
     if (!r || !r.width || !r.height) return false;
     const top = Math.max(r.top, headerBottom()), bottom = Math.min(r.bottom, innerHeight);
@@ -81,11 +102,13 @@
       const hit = document.elementFromPoint(x, y);
       if (!hit) continue;
       total++;
-      const ours = hit.id === 'rf-media-ui' || hit.id === 'rf-layout-ui';
+      // Our own UI (rails, media handles) never counts as covering.
+      const ours = hit.id === 'rf-media-ui' || hit.id === 'rf-layout-ui' ||
+        (ignoreFloating && !!hit.closest?.('[data-rf-floating]'));
       if (!ours && !scope.contains(hit) && !hit.contains(scope)) covered++;
     }
     return total > 0 && covered / total > .5;
   }
 
-  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, MIN_W, MAX_W, RANGES};
+  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, MIN_W, MAX_W, RANGES, ENUMS};
 })();

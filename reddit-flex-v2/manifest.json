@@ -3,6 +3,7 @@
   "name": "Reddit Flex",
   "version": "2.7.0",
   "description": "Resize Reddit's feed column, stretch and float video players, and expand posts and comments inline.",
+  "minimum_chrome_version": "116",
   "permissions": ["storage"],
   "icons": {
     "16": "icons/icon16.png",
@@ -21,7 +22,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.reddit.com/*", "https://reddit.com/*", "https://sh.reddit.com/*"],
-      "js": ["settings.js", "layout.js", "media.js", "accordion.js"],
+      "js": ["settings.js", "layout.js", "media.js", "accordion.js", "keyboard.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

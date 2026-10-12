@@ -6,6 +6,6 @@ export default [{
       console: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly', setInterval: 'readonly', requestAnimationFrame: 'readonly', cancelAnimationFrame: 'readonly',
       fetch: 'readonly', URL: 'readonly', Response: 'readonly', DOMParser: 'readonly', Image: 'readonly', Element: 'readonly', HTMLElement: 'readonly', ShadowRoot: 'readonly',
       MutationObserver: 'readonly', ResizeObserver: 'readonly', PointerEvent: 'readonly', getComputedStyle: 'readonly', getSelection: 'readonly', matchMedia: 'readonly',
-      addEventListener: 'readonly', removeEventListener: 'readonly', scrollBy: 'readonly', innerWidth: 'readonly', innerHeight: 'readonly', scrollX: 'readonly', scrollY: 'readonly' } },
+      addEventListener: 'readonly', removeEventListener: 'readonly', scrollBy: 'readonly', scrollTo: 'readonly', innerWidth: 'readonly', innerHeight: 'readonly', scrollX: 'readonly', scrollY: 'readonly' } },
   rules: { 'no-undef': 'error', 'no-unused-vars': ['warn', { args: 'none' }] },
 }];

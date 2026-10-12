@@ -2,7 +2,7 @@
 (() => {
   const RF = RedditFlex;
   const $ = id => document.getElementById(id);
-  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments'];
+  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard'];
   let s = {...RF.defaults};
   let saveTimer = 0;
 
