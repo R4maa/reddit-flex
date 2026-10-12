@@ -278,5 +278,11 @@ shreddit-post[data-rf-filtered],
 article:has(> shreddit-post[data-rf-filtered]),
 article:has(> shreddit-post[data-rf-filtered]) + hr { display: none !important; }
 
+/* ===== Read posts ===== */
+/* Dimmed in feeds only; full strength again while open, hovered, focused, under the keyboard
+   cursor, or playing in a floating window. */
+html.rf-dim-read shreddit-post[data-rf-read][view-context*="feed" i]:not([data-rf-open]):not([data-rf-kbd]):not(:hover):not(:focus-within):not(:has([data-rf-floating])) { opacity: .5; }
+html.rf-dim-read shreddit-post[data-rf-read] { transition: opacity .15s; }
+
 /* ===== Keyboard navigation ===== */
 shreddit-post[data-rf-kbd] { outline: 2px solid #ff4500 !important; outline-offset: 3px; border-radius: 16px; }

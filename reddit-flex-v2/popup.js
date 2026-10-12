@@ -2,7 +2,7 @@
 (() => {
   const RF = RedditFlex;
   const $ = id => document.getElementById(id);
-  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors', 'filterPosts', 'filterComments'];
+  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors', 'filterPosts', 'filterComments', 'markRead', 'dimRead'];
   const lists = {filterKeywords: 'keyword', filterSubs: 'name', filterUsers: 'name'};
   let s = {...RF.defaults};
   let saveTimer = 0;
@@ -39,6 +39,13 @@
     $(key).addEventListener('change', save);
     $(key).addEventListener('blur', () => setTimeout(render)); // tidy the text once focus has left
   }
+  // Read history lives under its own storage key, apart from the settings.
+  const READ_KEY = 'redditFlexRead';
+  // Counted the way the page reads it: distinct non-empty strings.
+  const readCount = v => Math.min(3000, new Set((Array.isArray(v?.ids) ? v.ids : []).filter(id => typeof id === 'string' && id)).size);
+  const showReadCount = n => { $('clearRead').textContent = n ? `Clear read history (${n.toLocaleString()})` : 'Read history is empty'; $('clearRead').disabled = !n; };
+  chrome.storage.local.get(READ_KEY).then(r => showReadCount(readCount(r[READ_KEY])));
+  $('clearRead').addEventListener('click', () => chrome.storage.local.set({[READ_KEY]: {ids: []}}));
   $('commentSort').addEventListener('change', e => commit({commentSort: e.target.value}, true));
   $('width').addEventListener('input', e => commit({width: Number(e.target.value)}));
   $('width').addEventListener('change', e => commit({width: Number(e.target.value)}, true));
@@ -49,5 +56,6 @@
   RF.read().then(v => { s = v; render(); });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.redditFlex) { s = RF.normalize(changes.redditFlex.newValue); render(); }
+    if (area === 'local' && changes[READ_KEY]) showReadCount(readCount(changes[READ_KEY].newValue));
   });
 })();

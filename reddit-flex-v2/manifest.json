@@ -22,7 +22,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.reddit.com/*", "https://reddit.com/*", "https://sh.reddit.com/*"],
-      "js": ["settings.js", "layout.js", "media.js", "accordion.js", "filters.js", "keyboard.js"],
+      "js": ["settings.js", "layout.js", "media.js", "accordion.js", "filters.js", "read.js", "keyboard.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

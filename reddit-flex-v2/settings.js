@@ -30,6 +30,8 @@
     filterKeywords: [],
     filterSubs: [],
     filterUsers: [],
+    markRead: true,
+    dimRead: true,
   });
 
   // Validates one value against the type of its default: booleans, clamped numbers, enums,
