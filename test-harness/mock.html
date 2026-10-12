@@ -19,8 +19,15 @@
   window.__clicks = [];
   // Fake reddit .json endpoint
   const realFetch = window.fetch;
+  // Fake rate limiting: set __rate.remaining / __rate.force429 from tests; requests are logged.
+  window.__rate = {remaining: 100, reset: 300, force429: false};
+  window.__fetches = [];
   window.fetch = async (url) => {
+    window.__fetches.push(String(url));
     await new Promise(r => setTimeout(r, 250));
+    const rl = {'x-ratelimit-remaining': String(window.__rate.remaining), 'x-ratelimit-reset': String(window.__rate.reset)};
+    if (window.__rate.force429) return new Response('', {status: 429, headers: rl});
+    window.__rate.remaining = Math.max(0, window.__rate.remaining - 1);
     const body = [{data: {children: [{data: {selftext_html: '<div class="md"><p>This is the <strong>full</strong> body of the post. It is much longer than the snippet.</p><p>Second paragraph with a <a href="https://example.com">link</a> and a <span class="md-spoiler-text">spoiler</span>.</p><script>window.__xss=1<\/script><img src=x onerror="window.__xss=2"><ul><li>one</li><li>two</li></ul><blockquote><p>quoted</p></blockquote></div>', author: 'op_user', num_comments: 42, permalink: '/r/test/comments/abc123/hello/'}}]}},
       {data: {children: (() => {
         const t = Date.now()/1000;
@@ -33,7 +40,7 @@
           c('bob', 'A second, separate thread starts here', [c('carol', 'reply to bob')], 7),
           c('dave', 'Third thread with no replies', [], 3)];
       })()}}];
-    return new Response(JSON.stringify(body), {status: 200, headers: {'content-type': 'application/json'}});
+    return new Response(JSON.stringify(body), {status: 200, headers: {'content-type': 'application/json', ...rl}});
   };
   // Shadow-DOM card like shreddit-post, with full-card link overlay and click-to-navigate
   customElements.define('shreddit-post', class extends HTMLElement {

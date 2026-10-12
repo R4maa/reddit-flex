@@ -14,6 +14,7 @@
     lockRatio: true,
     accordion: true,
     allPosts: true,
+    prefetch: true,
     autoComments: false,
     commentsHeight: 440,
   });

@@ -1,4 +1,4 @@
-# Reddit Flex 2.5
+# Reddit Flex 2.6
 
 A Chrome extension that makes the current Reddit desktop site (www.reddit.com) more flexible to use.
 
@@ -30,7 +30,7 @@ A Chrome extension that makes the current Reddit desktop site (www.reddit.com) m
 - Clicking the post's comment count expands the post and shows its top comments. Comments are drawn as a Reddit-style tree with avatars, with a thread line and rounded elbows into each reply. Each top-level thread is set apart by a divider. Click a comment's avatar or its thread line to collapse it (hovering lights up the whole thread). A collapsed comment shows a "+N hidden" pill; click anywhere on its row to expand it.
 - **Image, video, gallery and link posts** work the same way: clicking the title, the empty part of the card, or the comment count opens the top comments below the card (plus any text the post has). Clicking the image or video itself still opens Reddit's viewer or player controls, and external links still open the site. Switch this off with *Inline comments on all posts* in the popup.
 - Comments open in a **scrollable sub-window** (440 px tall by default), so the posts underneath stay close. Drag the grip under the box to make it taller or shorter. That height is remembered for every post, and double-clicking the grip resets it. When you scroll past the last comment, the page keeps scrolling to the next posts.
-- Posts are preloaded when you hover over them, so they usually open instantly.
+- Posts are preloaded when you rest the pointer on them (300 ms), so they usually open instantly. Preloading is budgeted (at most 15 per minute, on-screen posts only), pauses automatically when Reddit reports your request allowance is low or returns a 429, and can be turned off in the popup (*Preload on hover*). Posts you click always load.
 - Ctrl-, Shift- or middle-click still opens the post the usual way. Links inside the expanded text work as normal links.
 
 ## How it works / privacy

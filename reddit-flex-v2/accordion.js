@@ -104,16 +104,70 @@
     return frag;
   }
 
+  // ---- requests & rate limits -------------------------------------------------------------
+  // Every request goes through redditFetch so we can respect Reddit's per-user limits.
+  // Things the user clicks always go out; background work (preloading, avatars) is optional
+  // and backs off when Reddit says the budget is getting low.
+  const PREFETCH_PER_MIN = 15;   // max background preloads per rolling minute
+  const LOW_WATER = 20;          // stop background work when fewer requests than this remain
+  const rate = {remaining: Infinity, resetAt: 0, pausedUntil: 0};
+  const prefetchLog = [];        // timestamps of recent preloads
+
+  class RateLimited extends Error {
+    constructor(retryAt) { super('rate limited'); this.retryAt = retryAt; }
+  }
+
+  function readRateHeaders(r) {
+    const remaining = parseFloat(r.headers.get('x-ratelimit-remaining'));
+    const reset = parseFloat(r.headers.get('x-ratelimit-reset')); // seconds until the window resets
+    if (Number.isFinite(remaining)) rate.remaining = remaining;
+    if (Number.isFinite(reset)) rate.resetAt = Date.now() + reset * 1000;
+    if (rate.resetAt && Date.now() > rate.resetAt) rate.remaining = Infinity;
+  }
+
+  function backgroundAllowed() {
+    const now = Date.now();
+    if (now < rate.pausedUntil) return false;
+    if (rate.resetAt && now > rate.resetAt) rate.remaining = Infinity;
+    return rate.remaining >= LOW_WATER;
+  }
+
+  function prefetchAllowed() {
+    if (!s.prefetch || !backgroundAllowed()) return false;
+    const now = Date.now();
+    while (prefetchLog.length && now - prefetchLog[0] > 60000) prefetchLog.shift();
+    return prefetchLog.length < PREFETCH_PER_MIN;
+  }
+
+  async function redditFetch(url, init = {}, background = false) {
+    if (background && !backgroundAllowed()) throw new RateLimited(rate.pausedUntil || rate.resetAt);
+    const r = await fetch(url, {credentials: 'include', ...init});
+    readRateHeaders(r);
+    if (r.status === 429) {
+      // Pause background work until Reddit's window resets (at least a minute).
+      const retry = parseFloat(r.headers.get('retry-after'));
+      const wait = Math.max(60000, Number.isFinite(retry) ? retry * 1000 : 0, rate.resetAt - Date.now());
+      rate.pausedUntil = Date.now() + wait;
+      rate.remaining = 0;
+      throw new RateLimited(rate.pausedUntil);
+    }
+    return r;
+  }
+
   // ---- data -------------------------------------------------------------------------------
-  function load(post) {
+  function load(post, prefetch = false) {
     const id = postIdOf(post);
     if (!id) return Promise.reject(new Error('no id'));
     if (pending.has(id)) return pending.get(id);
+    if (prefetch) {
+      if (!prefetchAllowed()) return Promise.resolve(null); // skipped, nothing cached
+      prefetchLog.push(Date.now());
+    }
     const permalink = post.getAttribute('permalink');
     const url = new URL(permalink, location.origin);
     url.pathname = `${url.pathname.replace(/\/+$/, '')}.json`;
     url.search = '?raw_json=1&limit=40&depth=4&sort=confidence';
-    const p = fetch(url, {credentials: 'include', headers: {accept: 'application/json'}})
+    const p = redditFetch(url, {headers: {accept: 'application/json'}}, prefetch)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(json => {
         const d = json?.[0]?.data?.children?.[0]?.data;
@@ -121,7 +175,8 @@
         return {html: d.selftext_html || '', author: d.author, numComments: d.num_comments || 0,
           permalink: d.permalink || permalink, comments: json?.[1]?.data?.children || [], full: true};
       })
-      .catch(() => loadFromPage(permalink)) // fall back to Reddit's own post page markup
+      // Fall back to Reddit's own post page markup, unless we're being rate limited.
+      .catch(err => { if (err instanceof RateLimited) throw err; return loadFromPage(permalink); })
       .then(data => { resolved.set(id, data); return data; });
     pending.set(id, p);
     p.catch(() => pending.delete(id));
@@ -129,7 +184,7 @@
   }
 
   async function loadFromPage(permalink) {
-    const r = await fetch(new URL(permalink, location.origin), {credentials: 'include'});
+    const r = await redditFetch(new URL(permalink, location.origin));
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
     const body = doc.querySelector('shreddit-post [slot="text-body"] .md, shreddit-post [slot="text-body"]');
@@ -158,9 +213,11 @@
     if (st && (st.comments || s.autoComments)) showComments(post, false);
   }
 
-  function renderError(panel, post) {
-    panel.replaceChildren(el('div', {class: 'rf-acc-body rf-acc-empty'}, 'Couldn’t load this post. ',
-      el('a', {href: new URL(post.getAttribute('permalink'), location.origin).href}, 'Open it instead →')));
+  function renderError(panel, post, err) {
+    const secs = err instanceof RateLimited ? Math.max(5, Math.ceil((err.retryAt - Date.now()) / 1000)) : 0;
+    const msg = secs ? `Reddit is limiting requests right now. Try again in about ${secs > 90 ? `${Math.ceil(secs / 60)} min` : `${secs}s`}, or ` : 'Couldn’t load this post. ';
+    panel.replaceChildren(el('div', {class: 'rf-acc-body rf-acc-empty'}, msg,
+      el('a', {href: new URL(post.getAttribute('permalink'), location.origin).href}, secs ? 'open the full post →' : 'Open it instead →')));
   }
 
   // Avatars: an initial on a colour picked from the name, upgraded to the real picture once
@@ -188,9 +245,10 @@
     const missing = [...new Set(nodes.map(n => n.dataset.uid))].filter(id => /^t2_[a-z0-9]+$/i.test(id) && !avatarCache.has(id));
     for (let i = 0; i < missing.length; i += 100) {
       const ids = missing.slice(i, i + 100);
+      if (!backgroundAllowed()) break; // initials are fine; don't spend the user's budget
       ids.forEach(id => avatarCache.set(id, ''));
       try {
-        const r = await fetch(`${location.origin}/api/user_data_by_account_ids.json?ids=${ids.join(',')}`, {credentials: 'include'});
+        const r = await redditFetch(`${location.origin}/api/user_data_by_account_ids.json?ids=${ids.join(',')}`, {}, true);
         if (!r.ok) continue;
         const json = await r.json();
         for (const [id, u] of Object.entries(json || {})) {
@@ -356,7 +414,7 @@
     if (!cached) {
       load(post).then(
         data => { if (open.get(post)?.panel === panel) morph(panel, true, () => renderBody(panel, data, post)); },
-        () => { if (open.get(post)?.panel === panel) morph(panel, true, () => renderError(panel, post)); });
+        err => { if (open.get(post)?.panel === panel) morph(panel, true, () => renderError(panel, post, err)); });
     }
     return true;
   }
@@ -442,16 +500,20 @@
     }
   }
 
-  // Warm the cache while the pointer rests on a text post, so opening is instant.
+  // Warm the cache while the pointer rests on a post, so opening is instant. Budgeted:
+  // only after a short rest, only for posts on screen, and within the per-minute allowance.
   let hoverTimer = 0, hoverPost = null;
+  const onScreen = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
   document.addEventListener('pointerover', e => {
-    if (!s.enabled || !s.accordion) return;
+    if (!s.enabled || !s.accordion || !s.prefetch) return;
     const post = e.composedPath().find(n => isElement(n) && n.tagName === 'SHREDDIT-POST');
     if (post === hoverPost) return;
     hoverPost = post;
     clearTimeout(hoverTimer);
     if (post && eligible(post) && inFeed(post) && !pending.has(postIdOf(post))) {
-      hoverTimer = setTimeout(() => load(post).catch(() => {}), isTextPost(post) ? 140 : 250);
+      hoverTimer = setTimeout(() => {
+        if (hoverPost === post && post.isConnected && onScreen(post)) load(post, true).catch(() => {});
+      }, 300);
     }
   }, true);
 
