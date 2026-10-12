@@ -2,7 +2,8 @@
 (() => {
   const RF = RedditFlex;
   const $ = id => document.getElementById(id);
-  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors'];
+  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors', 'filterPosts', 'filterComments'];
+  const lists = {filterKeywords: 'keyword', filterSubs: 'name', filterUsers: 'name'};
   let s = {...RF.defaults};
   let saveTimer = 0;
 
@@ -10,6 +11,13 @@
     for (const key of toggles) $(key).checked = s[key];
     $('width').value = s.width;
     $('commentSort').value = s.commentSort;
+    for (const [key, kind] of Object.entries(lists)) {
+      // Never rewrite the box being typed in: normalizing would eat a fresh empty line.
+      if (document.activeElement !== $(key)) $(key).value = s[key].join('\n');
+      const bad = s[key].map(line => [line, RF.parsePattern(line, kind).error]).filter(([, err]) => err);
+      $(`${key}Warn`).hidden = !bad.length;
+      $(`${key}Warn`).textContent = bad.map(([line, err]) => `Ignored ${line}: ${err.replace(/^Invalid regular expression: .*?: (?=[^:]+$)/, '')}`).join('\n');
+    }
     $('widthOut').textContent = `${s.width}px`;
     for (const b of document.querySelectorAll('[data-width]')) b.classList.toggle('on', Number(b.dataset.width) === s.width);
     document.body.classList.toggle('off', !s.enabled);
@@ -24,6 +32,13 @@
   }
 
   for (const key of toggles) $(key).addEventListener('change', e => commit({[key]: e.target.checked}, true));
+  for (const key of Object.keys(lists)) {
+    let typing = 0;
+    const save = () => { clearTimeout(typing); commit({[key]: $(key).value.split('\n')}, true); };
+    $(key).addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(save, 400); });
+    $(key).addEventListener('change', save);
+    $(key).addEventListener('blur', () => setTimeout(render)); // tidy the text once focus has left
+  }
   $('commentSort').addEventListener('change', e => commit({commentSort: e.target.value}, true));
   $('width').addEventListener('input', e => commit({width: Number(e.target.value)}));
   $('width').addEventListener('change', e => commit({width: Number(e.target.value)}, true));

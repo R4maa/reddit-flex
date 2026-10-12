@@ -25,6 +25,11 @@
     commentSort: 'confidence',
     collapseAutoMod: true,
     threadColors: true,
+    filterPosts: true,
+    filterComments: true,
+    filterKeywords: [],
+    filterSubs: [],
+    filterUsers: [],
   });
 
   // Validates one value against the type of its default: booleans, clamped numbers, enums,
@@ -55,6 +60,49 @@
     for (const key of Object.keys(defaults)) out[key] = normalizeValue(defaults[key], src[key], key);
     return out;
   }
+
+  // ---- filters ----------------------------------------------------------------------------
+  // One entry per line. "/pattern/flags" is a regular expression; anything else is a word or
+  // phrase (whole words, any case) or, for subreddits and users, a name with optional r/ or u/.
+  // Returns {test} or {error}.
+  function parsePattern(line, kind) {
+    // "/u/name" and "/r/name" are names, not a regex "u" with flags "name".
+    const isName = kind !== 'keyword' && /^\/?(r|u|user)\/[\w-]+\/?$/i.test(line);
+    const rx = !isName && /^\/(.+)\/([dgimsuvy]*)$/.exec(line);
+    if (rx) {
+      try {
+        const re = new RegExp(rx[1], rx[2].replace(/[gy]/g, '')); // g/y would make test() stateful
+        return {test: v => re.test(v)};
+      } catch (e) { return {error: e.message}; }
+    }
+    if (kind === 'keyword') {
+      const esc = line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(?<![\\p{L}\\p{N}_])${esc}(?![\\p{L}\\p{N}_])`, 'iu');
+      return {test: v => re.test(v)};
+    }
+    const name = bare(line).trim().replace(/\/$/, '').toLowerCase();
+    return {test: v => bare(v).trim().toLowerCase() === name};
+  }
+  // "r/name", "/u/name" and "user/name" all mean "name".
+  const bare = v => String(v || '').replace(/^\/?(r|u|user)\//i, '');
+
+  // Compiles the filter lists in settings `s`. post()/comment() return why something matched
+  // ('keyword' | 'subreddit' | 'user') or '' when it doesn't (or that kind of filtering is off).
+  function makeFilter(s) {
+    const compile = (list, kind) => list.map(l => parsePattern(l, kind).test).filter(Boolean);
+    const kw = compile(s.filterKeywords, 'keyword'), subs = compile(s.filterSubs, 'name'), users = compile(s.filterUsers, 'name');
+    const hit = (tests, v) => !!v && tests.some(t => t(v));
+    return {
+      post: ({title, sub, author}) => !s.filterPosts ? ''
+        : hit(users, bare(author)) ? 'user' : hit(subs, bare(sub)) ? 'subreddit' : hit(kw, title) ? 'keyword' : '',
+      comment: ({text, author}) => !s.filterComments ? ''
+        : hit(users, bare(author)) ? 'user' : hit(kw, text) ? 'keyword' : '',
+    };
+  }
+
+  // Changes only when something that affects filtering changes (not, say, the column width).
+  const FILTER_KEYS = ['filterPosts', 'filterComments', 'filterKeywords', 'filterSubs', 'filterUsers'];
+  const filterKey = s => JSON.stringify(FILTER_KEYS.map(k => s[k]));
 
   async function read() {
     try { return normalize((await chrome.storage.local.get(KEY))[KEY]); }
@@ -114,5 +162,5 @@
     return total > 0 && covered / total > .5;
   }
 
-  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, MIN_W, MAX_W, RANGES, ENUMS};
+  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, parsePattern, makeFilter, filterKey, MIN_W, MAX_W, RANGES, ENUMS};
 })();

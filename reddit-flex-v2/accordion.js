@@ -6,6 +6,7 @@
 
   const RF = RedditFlex;
   let s = {...RF.defaults};
+  let filter = RF.makeFilter(s), filterKey = RF.filterKey(s);
   const pending = new Map();  // post id -> Promise<data>
   const resolved = new Map(); // post id -> data
   const open = new Map();     // shreddit-post -> {panel, snippet, h0, comments}
@@ -348,11 +349,13 @@
     if (depth < 4) for (const r of replies) { const n = renderComment(r, depth + 1, ctx); if (n) kids.append(n); }
     else if (replies.length) kids.append(el('div', {class: 'rf-c rf-c-moreitem'}, el('a', {class: 'rf-c-more', href: new URL(d.permalink, location.origin).href}, 'Continue thread →')));
     // data-tone colours the thread lines by depth (cycling) when that option is on.
-    const node = el('div', {class: 'rf-c', 'data-depth': depth, 'data-tone': depth % 5},
+    const node = el('div', {class: 'rf-c', 'data-depth': depth, 'data-tone': depth % 5, 'data-author': d.author},
       el('button', {type: 'button', class: 'rf-c-line', 'data-rf': 'toggle-comment', 'aria-label': 'Collapse thread', title: 'Collapse thread'}),
       head, el('div', {class: 'rf-c-content'}, body, kids.childElementCount ? kids : null));
     recount(node);
-    if (s.collapseAutoMod && d.author === 'AutoModerator') setCollapsed(node, true);
+    const filtered = filter.comment({text: body.textContent, author: d.author});
+    if (filtered) node.dataset.rfFiltered = filtered;
+    if (filtered || (s.collapseAutoMod && d.author === 'AutoModerator')) setCollapsed(node, true);
     return node;
   }
 
@@ -478,7 +481,9 @@
   function setCollapsed(c, collapsed) {
     const n = Number(c.dataset.count) || 1;
     c.classList.toggle('rf-collapsed', collapsed);
-    c.querySelector(':scope > .rf-c-head .rf-c-count').textContent = collapsed ? (n > 1 ? `+${n - 1} hidden` : 'hidden') : '';
+    const hidden = n > 1 ? `+${n - 1} hidden` : 'hidden';
+    c.querySelector(':scope > .rf-c-head .rf-c-count').textContent = !collapsed ? ''
+      : c.dataset.rfFiltered ? `filtered${n > 1 ? ` · +${n - 1} hidden` : ''}` : hidden;
     c.querySelector(':scope > .rf-c-head .rf-c-avatar')?.setAttribute('title', collapsed ? 'Expand' : 'Collapse');
   }
 
@@ -729,8 +734,26 @@
     },
   };
 
+  // When the filter lists change, open threads follow: newly matching comments collapse, and
+  // comments that no longer match are opened again (AutoModerator stays as its option says).
+  function refilter() {
+    for (const {panel} of open.values()) {
+      for (const c of panel.querySelectorAll('.rf-c:not(.rf-c-moreitem)')) {
+        const reason = filter.comment({text: c.querySelector(':scope > .rf-c-content > .rf-c-body')?.textContent || '', author: c.dataset.author});
+        const was = c.dataset.rfFiltered;
+        if (reason && !was) { c.dataset.rfFiltered = reason; setCollapsed(c, true); }
+        else if (!reason && was) {
+          delete c.dataset.rfFiltered;
+          setCollapsed(c, s.collapseAutoMod && c.dataset.author === 'AutoModerator');
+        }
+      }
+    }
+  }
+
   RF.subscribe(next => {
     s = next;
+    const key = RF.filterKey(s);
+    if (key !== filterKey) { filterKey = key; filter = RF.makeFilter(s); refilter(); }
     setBoxHeight(s.commentsHeight);
     html.classList.toggle('rf-thread-colors', s.enabled && s.threadColors);
     if (!s.enabled || !s.accordion) collapseAll();

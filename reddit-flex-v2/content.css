@@ -272,5 +272,11 @@ button.rf-c-more:disabled { cursor: progress; text-decoration: none; opacity: .5
   html.rf-animate #subgrid-container, html.rf-animate .main-container:has(> #main-content) { transition: none !important; }
 }
 
+/* ===== Filters ===== */
+/* A filtered feed post disappears along with its card wrapper and the divider after it. */
+shreddit-post[data-rf-filtered],
+article:has(> shreddit-post[data-rf-filtered]),
+article:has(> shreddit-post[data-rf-filtered]) + hr { display: none !important; }
+
 /* ===== Keyboard navigation ===== */
 shreddit-post[data-rf-kbd] { outline: 2px solid #ff4500 !important; outline-offset: 3px; border-radius: 16px; }
