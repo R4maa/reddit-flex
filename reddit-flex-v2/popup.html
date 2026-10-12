@@ -31,7 +31,8 @@
   button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 7px 6px; transition: background .12s, border-color .12s; }
   button:hover { border-color: var(--accent); }
   button.on { background: var(--accent-soft); border-color: var(--accent); }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  select { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 5px 6px; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* switches */
   .switch { position: relative; width: 36px; height: 20px; flex: none; }
   .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
@@ -80,6 +81,10 @@
   <div class="row"><label for="allPosts">Inline comments on all posts<small>Image, video, gallery &amp; link posts</small></label><span class="switch"><input id="allPosts" type="checkbox"><span></span></span></div>
   <div class="row"><label for="prefetch">Preload on hover<small>Faster opening; uses a little of your Reddit request allowance</small></label><span class="switch"><input id="prefetch" type="checkbox"><span></span></span></div>
   <div class="row"><label for="autoComments">Show comments on text posts automatically</label><span class="switch"><input id="autoComments" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="commentSort">Sort comments by<small>Also changes when you pick a sort under a post</small></label>
+    <select id="commentSort"><option value="confidence">Best</option><option value="top">Top</option><option value="new">New</option><option value="controversial">Controversial</option><option value="old">Old</option><option value="qa">Q&amp;A</option></select></div>
+  <div class="row"><label for="collapseAutoMod">Collapse AutoModerator comments</label><span class="switch"><input id="collapseAutoMod" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="threadColors">Colour thread lines by depth</label><span class="switch"><input id="threadColors" type="checkbox"><span></span></span></div>
 </section>
 
 <section>

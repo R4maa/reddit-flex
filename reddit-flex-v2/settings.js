@@ -7,7 +7,8 @@
   // Numeric settings are clamped to these ranges (nested keys use dots, e.g. 'widths.home').
   const RANGES = {width: [MIN_W, MAX_W], commentsHeight: [180, 1400]};
   // Settings limited to a fixed set of values; the first one listed is the fallback.
-  const ENUMS = {};
+  // commentSort uses the values of Reddit's `sort` parameter; 'confidence' is "Best".
+  const ENUMS = {commentSort: ['confidence', 'top', 'new', 'controversial', 'old', 'qa']};
   const defaults = Object.freeze({
     enabled: true,
     width: 900,
@@ -21,6 +22,9 @@
     autoComments: false,
     commentsHeight: 440,
     keyboard: false,
+    commentSort: 'confidence',
+    collapseAutoMod: true,
+    threadColors: true,
   });
 
   // Validates one value against the type of its default: booleans, clamped numbers, enums,

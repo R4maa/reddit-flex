@@ -2,13 +2,14 @@
 (() => {
   const RF = RedditFlex;
   const $ = id => document.getElementById(id);
-  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard'];
+  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors'];
   let s = {...RF.defaults};
   let saveTimer = 0;
 
   function render() {
     for (const key of toggles) $(key).checked = s[key];
     $('width').value = s.width;
+    $('commentSort').value = s.commentSort;
     $('widthOut').textContent = `${s.width}px`;
     for (const b of document.querySelectorAll('[data-width]')) b.classList.toggle('on', Number(b.dataset.width) === s.width);
     document.body.classList.toggle('off', !s.enabled);
@@ -23,6 +24,7 @@
   }
 
   for (const key of toggles) $(key).addEventListener('change', e => commit({[key]: e.target.checked}, true));
+  $('commentSort').addEventListener('change', e => commit({commentSort: e.target.value}, true));
   $('width').addEventListener('input', e => commit({width: Number(e.target.value)}));
   $('width').addEventListener('change', e => commit({width: Number(e.target.value)}, true));
   for (const b of document.querySelectorAll('[data-width]')) b.addEventListener('click', () => commit({width: Number(b.dataset.width)}, true));

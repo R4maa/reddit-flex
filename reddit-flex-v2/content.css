@@ -231,9 +231,17 @@ html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !impo
 /* Line from the avatar down past the comment body... */
 .rf-c:has(> .rf-c-content > .rf-c-kids > .rf-c) > .rf-c-content > .rf-c-body::before { content: ''; position: absolute; left: var(--rf-x); top: -2px; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
 /* ...a rounded elbow into each reply, and the line continuing only until the last reply. */
-.rf-c-kids > .rf-c::before { content: ''; position: absolute; left: var(--rf-x); top: 0; width: calc(var(--rf-g) - var(--rf-av) / 2 - 3px); height: calc(12px + var(--rf-av) / 2 + 1px); box-sizing: border-box; border-left: 2px solid var(--rf-line); border-bottom: 2px solid var(--rf-line); border-bottom-left-radius: 12px; pointer-events: none; }
+/* Elbows belong to the parent's line, so they take the parent's colour (--rf-pline). */
+.rf-c-kids { --rf-pline: var(--rf-line); }
+.rf-c-kids > .rf-c::before { content: ''; position: absolute; left: var(--rf-x); top: 0; width: calc(var(--rf-g) - var(--rf-av) / 2 - 3px); height: calc(12px + var(--rf-av) / 2 + 1px); box-sizing: border-box; border-left: 2px solid var(--rf-pline); border-bottom: 2px solid var(--rf-pline); border-bottom-left-radius: 12px; pointer-events: none; }
 .rf-c-kids > .rf-c.rf-c-moreitem::before { height: 23px; }
-.rf-c-kids > .rf-c:not(:last-child)::after { content: ''; position: absolute; left: var(--rf-x); top: 0; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
+.rf-c-kids > .rf-c:not(:last-child)::after { content: ''; position: absolute; left: var(--rf-x); top: 0; bottom: 0; width: 2px; background: var(--rf-pline); pointer-events: none; }
+/* Optional: a colour per depth, cycling every five levels. */
+html.rf-thread-colors .rf-c[data-tone="0"] { --rf-line: rgba(79, 142, 247, .6); }
+html.rf-thread-colors .rf-c[data-tone="1"] { --rf-line: rgba(70, 190, 110, .6); }
+html.rf-thread-colors .rf-c[data-tone="2"] { --rf-line: rgba(176, 112, 240, .6); }
+html.rf-thread-colors .rf-c[data-tone="3"] { --rf-line: rgba(230, 170, 40, .65); }
+html.rf-thread-colors .rf-c[data-tone="4"] { --rf-line: rgba(235, 90, 140, .6); }
 /* Invisible hit area over the line: hover lights up the thread, click collapses it. */
 .rf-c-line { position: absolute; left: calc(var(--rf-av) / 2 - 9px); top: calc(var(--rf-pt) + var(--rf-av)); bottom: 0; width: 18px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 1; }
 .rf-c:not(:has(> .rf-c-content > .rf-c-kids > .rf-c)) > .rf-c-line { display: none; }
@@ -252,6 +260,11 @@ html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !impo
 .rf-c-moreitem .rf-c-more { margin-top: 0; padding-left: 4px; }
 .rf-c-more { display: inline-block; margin-top: 8px; font: 600 12px/1.4 system-ui, sans-serif; color: inherit; opacity: .75; text-decoration: none; }
 .rf-c-more:hover { opacity: 1; text-decoration: underline; }
+button.rf-c-more { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
+button.rf-c-more:disabled { cursor: progress; text-decoration: none; opacity: .5; }
+.rf-c-more:focus-visible { outline: 2px solid #ff4500; outline-offset: 2px; border-radius: 4px; }
+.rf-acc-sort { appearance: auto; color-scheme: light dark; padding: 6px 10px; }
+.rf-acc-stat { margin-left: auto; align-self: center; font: 600 12px/1.4 system-ui, sans-serif; opacity: .65; }
 .rf-acc-all { margin-top: 14px; }
 
 @media (prefers-reduced-motion: reduce) {
