@@ -17,25 +17,25 @@
 
 ---
 
-## ✨ Features
+## Features
 
 <table>
 <tr>
 <td width="33%" valign="top">
 
-### ↔️ Resizable feed
+### Resizable feed
 Drag the orange rails beside the feed to make the middle column as narrow or as wide as you like. Double-click a rail to reset it. Presets and sidebar toggles are in the popup.
 
 </td>
 <td width="33%" valign="top">
 
-### 🎬 Stretch & float media
+### Stretch and float media
 Drag a corner to enlarge a video, image or gallery **past the column**. Drag **✥ Move** to pop it out into a floating window that stays put while you scroll. **Ctrl + scroll** zooms.
 
 </td>
 <td width="33%" valign="top">
 
-### 💬 Inline posts & comments
+### Inline posts and comments
 Click a post to expand it in place. Comments open in a resizable sub-window with a Reddit-style thread tree and avatars, and threads collapse with a click.
 
 </td>
@@ -44,18 +44,18 @@ Click a post to expand it in place. Comments open in a resizable sub-window with
 
 **Built to stay out of the way.** Controls hide when Reddit's image viewer is open. Ctrl-click and middle-click still open posts in a new tab. Preloading respects Reddit's request limits and can be turned off.
 
-## 🚀 Install
+## Install
 
 > Reddit Flex isn't on the Chrome Web Store yet, so you load it as an unpacked extension.
 
 1. Download this repository (**Code → Download ZIP**) and unzip it somewhere permanent.
 2. Open `chrome://extensions` and switch on **Developer mode** (top right).
 3. Click **Load unpacked** and choose the `reddit-flex-v2` folder.
-4. Pin Reddit Flex from the 🧩 menu, then refresh your Reddit tabs.
+4. Pin Reddit Flex from the extensions menu, then refresh your Reddit tabs.
 
-To update later, replace the files and click **↻ Reload** on the extension card.
+To update later, replace the files and click **Reload** on the extension card.
 
-## 🕹️ Using it
+## Using it
 
 | Do this | To |
 | --- | --- |
@@ -70,24 +70,22 @@ To update later, replace the files and click **↻ Reload** on the extension car
 
 Everything else (column presets, sidebars, proportions, inline comments on all posts, preloading) is in the toolbar popup.
 
-## 🔒 Privacy
+## Privacy
 
 - The only permission is **`storage`**, used for your layout settings on this device.
 - Talks only to Reddit, using your normal session, to load the posts and comments you open.
 - No analytics, no tracking, no remote code.
 
-## 🛠️ Development
+## Development
 
 ```text
-reddit-flex-v2/     the extension (settings, layout, media, accordion, popup)
-test-harness/       mock Reddit page: shadow-DOM cards, gallery, fake API & rate limits
+reddit-flex-v2/     the extension: settings, layout, media, accordion, popup
 docs/               README assets
 ```
 
-- `node test-harness/build.js` inlines the extension into `test-harness/bundle.html` for testing without the live site. Script errors are collected in `window.__errors`.
-- `npx eslint@9` lints the extension (catches undefined variables).
+`npx eslint@9` lints the extension (catches undefined variables).
 
-## ☕ Support
+## Support
 
 If Reddit Flex makes your scrolling nicer, you can buy me a coffee. It keeps the updates coming when Reddit changes its layout.
 
