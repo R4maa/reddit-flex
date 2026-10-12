@@ -42,20 +42,38 @@
     animTimer = setTimeout(() => html.classList.remove('rf-animate'), 450);
   }
 
+  // The page type picks the width when "Width per page type" is on. Reddit changes pages without
+  // reloading, so place() (run on clicks, history changes and DOM churn) checks the path again.
+  let pathOverride = null; // test harness only
+  const pageType = () => RF.pageType(pathOverride ?? location.pathname);
+  let type = pageType();
+  const width = () => RF.widthFor(s, type);
+
+  function checkPage() {
+    const next = pageType();
+    if (next === type) return;
+    const before = width();
+    type = next;
+    if (dragging || width() === before) return;
+    if (s.enabled && Math.abs(width() - before) > 60) animateLayout();
+    setWidthVar(width());
+  }
+
   function apply(next) {
     const prev = s, first = !apply.done;
     apply.done = true;
     s = next;
-    if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(prev.width - s.width) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft)) animateLayout();
+    if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(RF.widthFor(prev, type) - width()) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft)) animateLayout();
     html.classList.toggle('rf-enabled', s.enabled);
     html.classList.toggle('rf-hide-right', s.hideRight);
     html.classList.toggle('rf-hide-left', s.hideLeft);
     html.style.setProperty('--rf-right', s.hideRight ? '0px' : '340px');
-    if (!dragging) setWidthVar(s.width);
+    if (!dragging) setWidthVar(width());
     place();
   }
 
   function place() {
+    checkPage();
     if (raf) return;
     raf = requestAnimationFrame(() => {
       raf = 0;
@@ -89,10 +107,12 @@
     pillTimer = setTimeout(() => pill.classList.remove('show'), delay);
   }
 
-  function commit(width, animate) {
-    s = {...s, width: clamp(Math.round(width), RF.MIN_W, RF.MAX_W)};
+  // Saves a new width for this page's type (per-page mode) or for every page.
+  function commit(w, animate) {
+    w = clamp(Math.round(w), RF.MIN_W, RF.MAX_W);
+    s = s.widthPerPage ? {...s, widths: {...s.widths, [type]: w}} : {...s, width: w};
     if (animate) animateLayout();
-    setWidthVar(s.width);
+    setWidthVar(w);
     RF.save(s);
     place();
   }
@@ -160,15 +180,15 @@
       const grow = side === 'right' ? 'ArrowRight' : 'ArrowLeft';
       const shrink = side === 'right' ? 'ArrowLeft' : 'ArrowRight';
       let w = null;
-      if (e.key === grow) w = s.width + step;
-      else if (e.key === shrink) w = s.width - step;
+      if (e.key === grow) w = width() + step;
+      else if (e.key === shrink) w = width() - step;
       else if (e.key === 'Home') w = RF.MIN_W;
       else if (e.key === 'End') w = RF.MAX_W;
       if (w == null) return;
       e.preventDefault();
       commit(w, true);
       const r = rail.getBoundingClientRect();
-      showPill(`${s.width}px`, r.left + 8, innerHeight / 2);
+      showPill(`${width()}px`, r.left + 8, innerHeight / 2);
       hidePill(700);
     });
   }
@@ -179,12 +199,20 @@
     mutationTimer = setTimeout(() => { mutationTimer = 0; place(); }, 200);
   }).observe(document.body, {childList: true, subtree: true});
   addEventListener('resize', place);
+  // With the header scrolling away (polish.js), the rails' top follows it.
+  addEventListener('scroll', () => { if (html.classList.contains('rf-unstick-header')) place(); }, {passive: true});
   // Overlays like the image viewer open/close on click or Escape; re-check once they've rendered.
   const recheck = () => { place(); setTimeout(place, 120); setTimeout(place, 400); };
   addEventListener('click', recheck, true);
   addEventListener('keyup', e => { if (e.key === 'Escape') recheck(); }, true);
   addEventListener('popstate', recheck);
   document.addEventListener('fullscreenchange', place);
+
+  globalThis.RedditFlexLayout = {
+    pageType: () => type,
+    width,
+    _test: {setPath(p) { pathOverride = p; place(); }},
+  };
 
   RF.subscribe(apply);
 })();

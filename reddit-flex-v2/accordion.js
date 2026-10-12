@@ -6,11 +6,15 @@
 
   const RF = RedditFlex;
   let s = {...RF.defaults};
+  let filter = RF.makeFilter(s), filterKey = RF.filterKey(s);
   const pending = new Map();  // post id -> Promise<data>
   const resolved = new Map(); // post id -> data
   const open = new Map();     // shreddit-post -> {panel, snippet, h0, comments}
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const TOP_LEVEL = 10;
+  const MORE_BATCH = 100; // Reddit's limit on ids per /api/morechildren request
+  const SORTS = [['confidence', 'Best'], ['top', 'Top'], ['new', 'New'], ['controversial', 'Controversial'], ['old', 'Old'], ['qa', 'Q&A']];
+  const moreActions = new WeakMap(); // "load more" button -> what clicking it does
 
   // ---- helpers ----------------------------------------------------------------------------
   const isElement = n => n instanceof Element;
@@ -164,16 +168,15 @@
       prefetchLog.push(Date.now());
     }
     const permalink = post.getAttribute('permalink');
-    const url = new URL(permalink, location.origin);
-    url.pathname = `${url.pathname.replace(/\/+$/, '')}.json`;
-    url.search = '?raw_json=1&limit=40&depth=4&sort=confidence';
-    const p = redditFetch(url, {headers: {accept: 'application/json'}}, prefetch)
+    const sort = s.commentSort;
+    const p = redditFetch(jsonUrl(permalink, sort), {headers: {accept: 'application/json'}}, prefetch)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(json => {
         const d = json?.[0]?.data?.children?.[0]?.data;
         if (!d) throw new Error('unexpected response');
         return {html: d.selftext_html || '', author: d.author, numComments: d.num_comments || 0,
-          permalink: d.permalink || permalink, comments: json?.[1]?.data?.children || [], full: true};
+          permalink: d.permalink || permalink, linkId: d.name || `t3_${id}`, score: d.score, upvoteRatio: d.upvote_ratio,
+          sorts: {[sort]: json?.[1]?.data?.children || []}, full: true};
       })
       // Fall back to Reddit's own post page markup, unless we're being rate limited.
       .catch(err => { if (err instanceof RateLimited) throw err; return loadFromPage(permalink); })
@@ -190,7 +193,50 @@
     const body = doc.querySelector('shreddit-post [slot="text-body"] .md, shreddit-post [slot="text-body"]');
     if (!body) throw new Error('no body');
     return {html: body.innerHTML, numComments: Number(doc.querySelector('shreddit-post')?.getAttribute('comment-count')) || 0,
-      permalink, comments: [], full: false};
+      permalink, sorts: {}, full: false};
+  }
+
+  function jsonUrl(permalink, sort) {
+    const url = new URL(permalink, location.origin);
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}.json`;
+    url.search = `?raw_json=1&limit=40&depth=4&sort=${encodeURIComponent(sort)}`;
+    return url;
+  }
+
+  // Comments in another sort order: one request per post and sort, then cached with the post.
+  const sortPending = new Map(); // `${id}:${sort}` -> Promise<children>
+  function loadSort(post, sort) {
+    const id = postIdOf(post), data = resolved.get(id);
+    if (!data) return Promise.reject(new Error('post not loaded'));
+    if (data.sorts[sort]) return Promise.resolve(data.sorts[sort]);
+    const key = `${id}:${sort}`;
+    if (!sortPending.has(key)) {
+      sortPending.set(key, redditFetch(jsonUrl(data.permalink, sort), {headers: {accept: 'application/json'}})
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then(json => {
+          const list = json?.[1]?.data?.children;
+          if (!Array.isArray(list)) throw new Error('unexpected response');
+          return (data.sorts[sort] = list);
+        })
+        .finally(() => sortPending.delete(key)));
+    }
+    return sortPending.get(key);
+  }
+
+  // "N more replies": fetch the hidden comments and rebuild their tree from parent_id.
+  async function fetchMore(data, sort, ids) {
+    const url = new URL('/api/morechildren.json', location.origin);
+    url.search = `?api_type=json&raw_json=1&limit_children=false&link_id=${data.linkId}&sort=${encodeURIComponent(sort)}&children=${ids.join(',')}`;
+    const r = await redditFetch(url, {headers: {accept: 'application/json'}});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const things = (await r.json())?.json?.data?.things;
+    if (!Array.isArray(things)) throw new Error('unexpected response');
+    // Two passes, so a reply listed before its parent still lands under it.
+    const nodes = things.map(t => ({kind: t.kind, data: {...t.data, replies: {data: {children: []}}}}));
+    const byName = new Map(nodes.filter(n => n.kind === 't1' && n.data.name).map(n => [n.data.name, n]));
+    const roots = [];
+    for (const n of nodes) (byName.get(n.data.parent_id)?.data.replies.data.children ?? roots).push(n);
+    return roots;
   }
 
   // ---- rendering --------------------------------------------------------------------------
@@ -207,7 +253,9 @@
     const actions = el('div', {class: 'rf-acc-actions'},
       data.numComments ? el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'comments'}, `💬 ${compact(data.numComments)} comments`) : null,
       el('a', {class: 'rf-acc-btn', href: new URL(data.permalink, location.origin).href, 'data-rf': 'thread'}, 'Open thread ↗'),
-      el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'collapse'}, 'Collapse ▴'));
+      el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'collapse'}, 'Collapse ▴'),
+      Number.isFinite(data.upvoteRatio) ? el('span', {class: 'rf-acc-stat', title: 'Score · share of votes that are upvotes'},
+        `▲ ${compact(data.score)} · ${Math.round(data.upvoteRatio * 100)}% upvoted`) : null);
     panel.replaceChildren(...[body, actions].filter(Boolean));
     const st = open.get(post);
     if (st && (st.comments || s.autoComments)) showComments(post, false);
@@ -260,13 +308,24 @@
     for (const n of nodes) { const url = avatarCache.get(n.dataset.uid); if (url && !n.querySelector('img')) setAvatar(n, url); }
   }
 
-  function renderComment(c, depth, opName, permalink) {
+  // ctx: {data, post}. Replies deeper than 4 levels link to the thread instead.
+  function renderComment(c, depth, ctx) {
+    const {data} = ctx, permalink = data.permalink;
     if (c.kind === 'more') {
-      const n = c.data?.count || 0;
-      if (!n) return null;
-      const parent = (c.data.parent_id || '').replace(/^t1_/, '');
-      const href = new URL(parent && c.data.parent_id.startsWith('t1_') ? `${permalink.replace(/\/?$/, '/')}${parent}/` : permalink, location.origin).href;
-      return el('div', {class: 'rf-c rf-c-moreitem'}, el('a', {class: 'rf-c-more', href}, `${n} more ${n === 1 ? 'reply' : 'replies'} →`));
+      const n = c.data?.count || 0, ids = c.data?.children || [];
+      const parentId = c.data?.parent_id || '';
+      if (!ids.length) {
+        // An empty "more" means the thread continues on its own page.
+        if (!parentId.startsWith('t1_')) return null;
+        const href = new URL(`${permalink.replace(/\/?$/, '/')}${parentId.slice(3)}/`, location.origin).href;
+        return el('div', {class: 'rf-c rf-c-moreitem'}, el('a', {class: 'rf-c-more', href}, 'Continue thread →'));
+      }
+      const count = Math.max(n, ids.length);
+      const noun = parentId.startsWith('t1_') ? (count === 1 ? 'reply' : 'replies') : (count === 1 ? 'comment' : 'comments');
+      const btn = el('button', {type: 'button', class: 'rf-c-more', 'data-rf': 'more'}, `${count} more ${noun}`);
+      const item = el('div', {class: 'rf-c rf-c-moreitem'}, btn);
+      moreActions.set(btn, () => loadMore(item, btn, c.data, depth, ctx));
+      return item;
     }
     if (c.kind !== 't1') return null;
     const d = c.data;
@@ -276,7 +335,7 @@
     const head = el('div', {class: 'rf-c-head', 'data-rf': 'comment-head'},
       avatar(d.author, d.author_fullname),
       author,
-      d.author === opName ? el('span', {class: 'rf-c-op'}, 'OP') : null,
+      d.author === data.author ? el('span', {class: 'rf-c-op'}, 'OP') : null,
       d.stickied ? el('span', {class: 'rf-c-pin'}, 'pinned') : null,
       el('span', {}, '·'),
       el('span', {}, `▲ ${d.score_hidden ? '•' : compact(d.score)}`),
@@ -287,13 +346,93 @@
     body.append(sanitize(d.body_html || ''));
     const kids = el('div', {class: 'rf-c-kids'});
     const replies = d.replies?.data?.children || [];
-    if (depth < 4) for (const r of replies) { const n = renderComment(r, depth + 1, opName, permalink); if (n) kids.append(n); }
+    if (depth < 4) for (const r of replies) { const n = renderComment(r, depth + 1, ctx); if (n) kids.append(n); }
     else if (replies.length) kids.append(el('div', {class: 'rf-c rf-c-moreitem'}, el('a', {class: 'rf-c-more', href: new URL(d.permalink, location.origin).href}, 'Continue thread →')));
-    const node = el('div', {class: 'rf-c', 'data-depth': depth},
+    // data-tone colours the thread lines by depth (cycling) when that option is on.
+    const node = el('div', {class: 'rf-c', 'data-depth': depth, 'data-tone': depth % 5, 'data-author': d.author},
       el('button', {type: 'button', class: 'rf-c-line', 'data-rf': 'toggle-comment', 'aria-label': 'Collapse thread', title: 'Collapse thread'}),
       head, el('div', {class: 'rf-c-content'}, body, kids.childElementCount ? kids : null));
-    node.dataset.count = String(1 + kids.querySelectorAll('.rf-c:not(.rf-c-moreitem)').length);
+    recount(node);
+    const filtered = filter.comment({text: body.textContent, author: d.author});
+    if (filtered) node.dataset.rfFiltered = filtered;
+    if (filtered || (s.collapseAutoMod && d.author === 'AutoModerator')) setCollapsed(node, true);
     return node;
+  }
+
+  function recount(c) {
+    c.dataset.count = String(1 + c.querySelectorAll('.rf-c:not(.rf-c-moreitem)').length);
+    if (c.classList.contains('rf-collapsed')) setCollapsed(c, true); // refresh the "+N hidden" label
+  }
+
+  async function loadMore(item, btn, more, depth, ctx) {
+    if (btn.disabled) return;
+    const st = open.get(ctx.post);
+    const ids = more.children.slice(0, MORE_BATCH), rest = more.children.slice(MORE_BATCH);
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+    try {
+      const roots = await fetchMore(ctx.data, st?.sort || s.commentSort, ids);
+      if (!item.isConnected) return;
+      const nodes = roots.map(c => renderComment(c, depth, ctx)).filter(Boolean);
+      if (rest.length) {
+        const left = renderComment({kind: 'more', data: {...more, children: rest, count: Math.max(rest.length, (more.count || 0) - ids.length)}}, depth, ctx);
+        if (left) nodes.push(left);
+      }
+      if (!nodes.length) { btn.textContent = 'No more replies to show'; return; } // stays disabled
+      const box = item.closest('.rf-acc-comments'), parent = item.parentElement;
+      item.replaceWith(...nodes);
+      for (let c = parent?.closest('.rf-c'); c; c = c.parentElement?.closest('.rf-c')) recount(c);
+      if (box) loadAvatars(box);
+    } catch (err) {
+      if (!item.isConnected) return;
+      btn.disabled = false;
+      btn.textContent = err instanceof RateLimited ? 'Reddit is limiting requests · try again shortly' : 'Couldn’t load replies · try again';
+    }
+  }
+
+  // Top-level comments come in pages of TOP_LEVEL. After the last page comes Reddit's own "more".
+  // (comments: the top-level t1s; stubs: Reddit's own top-level "more" items.)
+  function appendTopLevel(wrap, comments, stubs, from, ctx) {
+    const add = n => { if (n) wrap.insertBefore(n, wrap.querySelector(':scope > .rf-acc-all')); };
+    for (const c of comments.slice(from, from + TOP_LEVEL)) add(renderComment(c, 0, ctx));
+    const left = comments.length - from - TOP_LEVEL;
+    if (left <= 0) { for (const c of stubs) add(renderComment(c, 0, ctx)); return; }
+    const btn = el('button', {type: 'button', class: 'rf-c-more', 'data-rf': 'more'}, `Show ${Math.min(TOP_LEVEL, left)} more comments`);
+    const item = el('div', {class: 'rf-c rf-c-moreitem'}, btn);
+    moreActions.set(btn, () => { item.remove(); appendTopLevel(wrap, comments, stubs, from + TOP_LEVEL, ctx); loadAvatars(wrap); });
+    add(item);
+  }
+
+  function renderList(wrap, list, post) {
+    const data = resolved.get(postIdOf(post));
+    wrap.replaceChildren();
+    if (!list.some(c => c.kind === 't1')) { wrap.append(el('p', {class: 'rf-acc-empty'}, 'No comments yet.')); return; }
+    wrap.append(el('a', {class: 'rf-acc-btn rf-acc-all', href: new URL(data.permalink, location.origin).href}, `Open the full thread (${compact(data.numComments)}) ↗`));
+    appendTopLevel(wrap, list.filter(c => c.kind === 't1'), list.filter(c => c.kind !== 't1'), 0, {data, post});
+    loadAvatars(wrap);
+  }
+
+  // Fills the comment box for the panel's current sort, fetching that sort if needed.
+  function fillComments(post, wrap) {
+    const st = open.get(post), data = resolved.get(postIdOf(post));
+    if (!st || !data) return;
+    const sort = st.sort;
+    if (data.sorts[sort]) { renderList(wrap, data.sorts[sort], post); return; }
+    wrap.replaceChildren(skeleton());
+    const current = () => open.get(post) === st && st.sort === sort && wrap.isConnected;
+    loadSort(post, sort).then(
+      list => { if (current()) morph(wrap, true, () => renderList(wrap, list, post)); },
+      err => {
+        if (!current()) return;
+        const secs = err instanceof RateLimited ? Math.max(5, Math.ceil((err.retryAt - Date.now()) / 1000)) : 0;
+        wrap.replaceChildren(el('p', {class: 'rf-acc-empty'}, secs ? `Reddit is limiting requests right now. Try again in about ${secs}s.` : 'Couldn’t load comments in this order.'));
+      });
+  }
+
+  function sortSelect(value) {
+    const sel = el('select', {class: 'rf-acc-btn rf-acc-sort', 'data-rf': 'sort', 'aria-label': 'Sort comments', title: 'Sort comments'});
+    for (const [v, label] of SORTS) sel.append(el('option', {value: v, selected: v === value}, label));
+    return sel;
   }
 
   function showComments(post, animate = true) {
@@ -304,34 +443,20 @@
     if (!data || st.panel.querySelector('.rf-acc-comments')) return;
     morph(st.panel, animate, () => {
       const wrap = el('div', {class: 'rf-acc-comments'});
-      const list = data.comments.filter(c => c.kind === 't1');
-      if (!data.full) {
-        wrap.append(el('a', {class: 'rf-c-more', href: new URL(data.permalink, location.origin).href}, 'Open the thread to read comments →'));
-      } else if (!list.length) {
-        wrap.append(el('p', {class: 'rf-acc-empty'}, 'No comments yet.'));
-      } else {
-        for (const c of list.slice(0, TOP_LEVEL)) { const n = renderComment(c, 0, data.author, data.permalink); if (n) wrap.append(n); }
-        if (data.numComments > wrap.querySelectorAll('.rf-c').length) {
-          wrap.append(el('a', {class: 'rf-acc-btn rf-acc-all', href: new URL(data.permalink, location.origin).href}, `View all ${compact(data.numComments)} comments ↗`));
-        }
-      }
-      loadAvatars(wrap);
       st.panel.append(wrap, el('div', {class: 'rf-acc-grip', role: 'separator', 'aria-orientation': 'horizontal',
         'aria-label': 'Resize comments', title: 'Drag to resize comments · double-click to reset'}));
+      if (data.full) fillComments(post, wrap);
+      else wrap.append(el('a', {class: 'rf-c-more', href: new URL(data.permalink, location.origin).href}, 'Open the thread to read comments →'));
       st.panel.querySelector('[data-rf="comments"]')?.replaceWith(
-        el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'hide-comments'}, 'Hide comments'));
+        el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'hide-comments'}, 'Hide comments'),
+        data.full ? sortSelect(st.sort) : '');
     });
   }
 
   function toggleComment(c) {
     if (c.dataset.animating) return;
     const collapsing = !c.classList.contains('rf-collapsed');
-    const n = Number(c.dataset.count) || 1;
-    const setState = () => {
-      c.classList.toggle('rf-collapsed', collapsing);
-      c.querySelector(':scope > .rf-c-head .rf-c-count').textContent = collapsing ? (n > 1 ? `+${n - 1} hidden` : 'hidden') : '';
-      c.querySelector(':scope > .rf-c-head .rf-c-avatar')?.setAttribute('title', collapsing ? 'Expand' : 'Collapse');
-    };
+    const setState = () => setCollapsed(c, collapsing);
     const h0 = c.getBoundingClientRect().height;
     c.dataset.animating = '1';
     let done;
@@ -353,6 +478,15 @@
     }
   }
 
+  function setCollapsed(c, collapsed) {
+    const n = Number(c.dataset.count) || 1;
+    c.classList.toggle('rf-collapsed', collapsed);
+    const hidden = n > 1 ? `+${n - 1} hidden` : 'hidden';
+    c.querySelector(':scope > .rf-c-head .rf-c-count').textContent = !collapsed ? ''
+      : c.dataset.rfFiltered ? `filtered${n > 1 ? ` · +${n - 1} hidden` : ''}` : hidden;
+    c.querySelector(':scope > .rf-c-head .rf-c-avatar')?.setAttribute('title', collapsed ? 'Expand' : 'Collapse');
+  }
+
   function hideComments(post) {
     const st = open.get(post);
     if (!st) return;
@@ -361,6 +495,7 @@
     morph(st.panel, true, () => {
       st.panel.querySelector('.rf-acc-comments')?.remove();
       st.panel.querySelector('.rf-acc-grip')?.remove();
+      st.panel.querySelector('.rf-acc-sort')?.remove();
       st.panel.querySelector('[data-rf="hide-comments"]')?.replaceWith(
         el('button', {type: 'button', class: 'rf-acc-btn', 'data-rf': 'comments'}, `💬 ${compact(data?.numComments)} comments`));
     });
@@ -406,7 +541,7 @@
       panel.classList.add('rf-acc-outside');
       post.after(panel);
     }
-    open.set(post, {panel, snippet, h0, comments: !!withComments});
+    open.set(post, {panel, snippet, h0, comments: !!withComments, sort: s.commentSort});
     post.setAttribute('data-rf-open', '');
     if (snippet) snippet.style.setProperty('display', 'none', 'important');
 
@@ -494,6 +629,7 @@
     if (action === 'collapse') collapse(post);
     else if (action === 'comments') showComments(post);
     else if (action === 'hide-comments') hideComments(post);
+    else if (action === 'more') moreActions.get(path.find(n => isElement(n) && n.dataset?.rf === 'more'))?.();
     else if (action === 'toggle-comment' || action === 'comment-head') {
       const sel = getSelection();
       if (sel && !sel.isCollapsed) return;
@@ -531,6 +667,20 @@
     }, 400);
   }).observe(document.body, {childList: true, subtree: true});
 
+  // Changing the sort reloads that panel's comments and becomes the default for new ones.
+  addEventListener('change', e => {
+    const sel = e.composedPath()[0];
+    if (!isElement(sel) || !sel.classList.contains('rf-acc-sort')) return;
+    const post = [...open.keys()].find(p => open.get(p).panel.contains(sel));
+    const wrap = post && open.get(post).panel.querySelector('.rf-acc-comments');
+    if (!wrap) return;
+    open.get(post).sort = sel.value;
+    s = {...s, commentSort: sel.value};
+    RF.save(s);
+    wrap.scrollTop = 0;
+    fillComments(post, wrap);
+  }, true);
+
   // Drag the grip under a comment box to set how tall comment boxes are (remembered).
   const html = document.documentElement;
   const [MIN_H, MAX_H] = RF.RANGES.commentsHeight;
@@ -566,9 +716,48 @@
     RF.save(s);
   }, true);
 
+  // Small API for other modules (keyboard navigation). Mirrors what a click on the card does.
+  // `fetch` is redditFetch, so other modules' Reddit requests share the same rate limiting.
+  globalThis.RedditFlexAccordion = {
+    fetch: redditFetch,
+    canExpand: post => s.enabled && s.accordion && eligible(post) && inFeed(post),
+    isOpen: post => open.has(post),
+    panel: post => open.get(post)?.panel || null,
+    toggle(post, {comments = false} = {}) {
+      if (!this.canExpand(post)) return false;
+      if (open.has(post)) {
+        // With `comments`, only the comments toggle (like the panel's own button); otherwise the post does.
+        if (!comments) collapse(post);
+        else if (open.get(post).comments) hideComments(post);
+        else showComments(post);
+        return true;
+      }
+      return expand(post, comments);
+    },
+  };
+
+  // When the filter lists change, open threads follow: newly matching comments collapse, and
+  // comments that no longer match are opened again (AutoModerator stays as its option says).
+  function refilter() {
+    for (const {panel} of open.values()) {
+      for (const c of panel.querySelectorAll('.rf-c:not(.rf-c-moreitem)')) {
+        const reason = filter.comment({text: c.querySelector(':scope > .rf-c-content > .rf-c-body')?.textContent || '', author: c.dataset.author});
+        const was = c.dataset.rfFiltered;
+        if (reason && !was) { c.dataset.rfFiltered = reason; setCollapsed(c, true); }
+        else if (!reason && was) {
+          delete c.dataset.rfFiltered;
+          setCollapsed(c, s.collapseAutoMod && c.dataset.author === 'AutoModerator');
+        }
+      }
+    }
+  }
+
   RF.subscribe(next => {
     s = next;
+    const key = RF.filterKey(s);
+    if (key !== filterKey) { filterKey = key; filter = RF.makeFilter(s); refilter(); }
     setBoxHeight(s.commentsHeight);
+    html.classList.toggle('rf-thread-colors', s.enabled && s.threadColors);
     if (!s.enabled || !s.accordion) collapseAll();
   });
 })();

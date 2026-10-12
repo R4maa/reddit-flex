@@ -231,9 +231,17 @@ html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !impo
 /* Line from the avatar down past the comment body... */
 .rf-c:has(> .rf-c-content > .rf-c-kids > .rf-c) > .rf-c-content > .rf-c-body::before { content: ''; position: absolute; left: var(--rf-x); top: -2px; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
 /* ...a rounded elbow into each reply, and the line continuing only until the last reply. */
-.rf-c-kids > .rf-c::before { content: ''; position: absolute; left: var(--rf-x); top: 0; width: calc(var(--rf-g) - var(--rf-av) / 2 - 3px); height: calc(12px + var(--rf-av) / 2 + 1px); box-sizing: border-box; border-left: 2px solid var(--rf-line); border-bottom: 2px solid var(--rf-line); border-bottom-left-radius: 12px; pointer-events: none; }
+/* Elbows belong to the parent's line, so they take the parent's colour (--rf-pline). */
+.rf-c-kids { --rf-pline: var(--rf-line); }
+.rf-c-kids > .rf-c::before { content: ''; position: absolute; left: var(--rf-x); top: 0; width: calc(var(--rf-g) - var(--rf-av) / 2 - 3px); height: calc(12px + var(--rf-av) / 2 + 1px); box-sizing: border-box; border-left: 2px solid var(--rf-pline); border-bottom: 2px solid var(--rf-pline); border-bottom-left-radius: 12px; pointer-events: none; }
 .rf-c-kids > .rf-c.rf-c-moreitem::before { height: 23px; }
-.rf-c-kids > .rf-c:not(:last-child)::after { content: ''; position: absolute; left: var(--rf-x); top: 0; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
+.rf-c-kids > .rf-c:not(:last-child)::after { content: ''; position: absolute; left: var(--rf-x); top: 0; bottom: 0; width: 2px; background: var(--rf-pline); pointer-events: none; }
+/* Optional: a colour per depth, cycling every five levels. */
+html.rf-thread-colors .rf-c[data-tone="0"] { --rf-line: rgba(79, 142, 247, .6); }
+html.rf-thread-colors .rf-c[data-tone="1"] { --rf-line: rgba(70, 190, 110, .6); }
+html.rf-thread-colors .rf-c[data-tone="2"] { --rf-line: rgba(176, 112, 240, .6); }
+html.rf-thread-colors .rf-c[data-tone="3"] { --rf-line: rgba(230, 170, 40, .65); }
+html.rf-thread-colors .rf-c[data-tone="4"] { --rf-line: rgba(235, 90, 140, .6); }
 /* Invisible hit area over the line: hover lights up the thread, click collapses it. */
 .rf-c-line { position: absolute; left: calc(var(--rf-av) / 2 - 9px); top: calc(var(--rf-pt) + var(--rf-av)); bottom: 0; width: 18px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 1; }
 .rf-c:not(:has(> .rf-c-content > .rf-c-kids > .rf-c)) > .rf-c-line { display: none; }
@@ -252,9 +260,49 @@ html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !impo
 .rf-c-moreitem .rf-c-more { margin-top: 0; padding-left: 4px; }
 .rf-c-more { display: inline-block; margin-top: 8px; font: 600 12px/1.4 system-ui, sans-serif; color: inherit; opacity: .75; text-decoration: none; }
 .rf-c-more:hover { opacity: 1; text-decoration: underline; }
+button.rf-c-more { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
+button.rf-c-more:disabled { cursor: progress; text-decoration: none; opacity: .5; }
+.rf-c-more:focus-visible { outline: 2px solid #ff4500; outline-offset: 2px; border-radius: 4px; }
+.rf-acc-sort { appearance: auto; color-scheme: light dark; padding: 6px 10px; }
+.rf-acc-stat { margin-left: auto; align-self: center; font: 600 12px/1.4 system-ui, sans-serif; opacity: .65; }
 .rf-acc-all { margin-top: 14px; }
 
 @media (prefers-reduced-motion: reduce) {
   .rf-skel { animation: none; }
   html.rf-animate #subgrid-container, html.rf-animate .main-container:has(> #main-content) { transition: none !important; }
 }
+
+/* ===== Filters ===== */
+/* A filtered feed post disappears along with its card wrapper and the divider after it. */
+shreddit-post[data-rf-filtered],
+article:has(> shreddit-post[data-rf-filtered]),
+article:has(> shreddit-post[data-rf-filtered]) + hr { display: none !important; }
+
+/* ===== Read posts ===== */
+/* Dimmed in feeds only; full strength again while open, hovered, focused, under the keyboard
+   cursor, or playing in a floating window. */
+html.rf-dim-read shreddit-post[data-rf-read][view-context*="feed" i]:not([data-rf-open]):not([data-rf-kbd]):not(:hover):not(:focus-within):not(:has([data-rf-floating])) { opacity: .5; }
+html.rf-dim-read shreddit-post[data-rf-read] { transition: opacity .15s; }
+
+/* ===== Keyboard navigation ===== */
+shreddit-post[data-rf-kbd] { outline: 2px solid #ff4500 !important; outline-offset: 3px; border-radius: 16px; }
+
+/* ===== Hide clutter ===== */
+/* Each option is an html class set by clutter.js. Trending searches are the exception: they sit in
+   the search box's shadow root, so clutter.js styles them there. */
+/* Promoted posts in feeds (and the divider after them), in the sidebar and in comment threads. */
+html.rf-enabled.rf-hide-promoted :is(shreddit-ad-post, shreddit-sidebar-ad, shreddit-comments-page-ad, shreddit-comment-tree-ads, shreddit-comment-tree-ad),
+html.rf-enabled.rf-hide-promoted shreddit-ad-post + hr { display: none !important; }
+/* "Advertise" (header and left nav), "Reddit Pro" (left nav), "Premium" (user menu). */
+html.rf-enabled.rf-hide-upsells :is(advertise-button, faceplate-tracker:is([noun="advertise_menu"], [noun="reddit_pro_menu"], [noun="premium_menu"])) { display: none !important; }
+/* Home feed posts from communities you haven't joined ("Because you've visited…"). Logged in only:
+   logged out, no post is from a joined community. (Logged out, Reddit's home feed is the
+   popular-feed and posts carry no user-logged-in attribute; both guards hold on their own.) */
+html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > article:has(> shreddit-post[user-logged-in]:not([is-subscribed])),
+html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > article:has(> shreddit-post[user-logged-in]:not([is-subscribed])) + hr { display: none !important; }
+/* The "Award" button under comments (posts already hide theirs). */
+html.rf-enabled.rf-hide-awards award-button { display: none !important; }
+/* Header scrolls away with the page instead of staying on top (Reddit fixes it to the top). */
+html.rf-enabled.rf-unstick-header reddit-header-large { position: absolute !important; }
+/* ...and the left navigation, fixed just below it, follows its visible bottom edge (polish.js sets --rf-head). */
+html.rf-enabled.rf-unstick-header #flex-left-nav-container { top: var(--rf-head, 56px) !important; height: calc(100vh - var(--rf-head, 56px)) !important; }

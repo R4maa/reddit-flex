@@ -28,10 +28,12 @@
   .width-head output { font-variant-numeric: tabular-nums; font-weight: 700; }
   input[type=range] { width: 100%; accent-color: var(--accent); margin: 8px 0 6px; }
   .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .presets[hidden] { display: none; }
   button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 7px 6px; transition: background .12s, border-color .12s; }
   button:hover { border-color: var(--accent); }
   button.on { background: var(--accent-soft); border-color: var(--accent); }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  select { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 5px 6px; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   /* switches */
   .switch { position: relative; width: 36px; height: 20px; flex: none; }
   .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
@@ -46,6 +48,12 @@
   footer { display: flex; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
   footer button { flex: 1; }
   body.off section { opacity: .45; pointer-events: none; }
+  .field { display: block; margin: 10px 0 4px; font-weight: 600; }
+  .field small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+  textarea { display: block; width: 100%; min-height: 54px; resize: vertical; font: 12px/1.45 ui-monospace, Consolas, monospace; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 6px 8px; }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button.wide { width: 100%; margin-top: 6px; }
+  .warn { margin: 4px 0 0; color: #d93a00; font-size: 11.5px; }
 </style>
 </head>
 <body>
@@ -64,6 +72,13 @@
     <button data-width="1200">Wide</button>
     <button data-width="1600">Ultra</button>
   </div>
+  <div class="row"><label for="widthPerPage">Width per page type<small>Home, subreddits, posts and other pages each keep their own width</small></label><span class="switch"><input id="widthPerPage" type="checkbox"><span></span></span></div>
+  <div class="presets" id="pageTypes" role="group" aria-label="Page type the width applies to" hidden>
+    <button data-type="home">Home</button>
+    <button data-type="subreddit">Subreddit</button>
+    <button data-type="post">Post</button>
+    <button data-type="other">Other</button>
+  </div>
   <div class="row"><label for="hideRight">Hide right sidebar</label><span class="switch"><input id="hideRight" type="checkbox"><span></span></span></div>
   <div class="row"><label for="hideLeft">Hide left navigation</label><span class="switch"><input id="hideLeft" type="checkbox"><span></span></span></div>
 </section>
@@ -72,6 +87,7 @@
   <h2>Media</h2>
   <div class="row"><label for="media">Resize &amp; move videos and images</label><span class="switch"><input id="media" type="checkbox"><span></span></span></div>
   <div class="row"><label for="lockRatio">Keep proportions<small>Hold Shift while dragging to flip this</small></label><span class="switch"><input id="lockRatio" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="autoplay">Autoplay videos<small>Off: videos wait until you press play</small></label><span class="switch"><input id="autoplay" type="checkbox"><span></span></span></div>
 </section>
 
 <section>
@@ -80,6 +96,53 @@
   <div class="row"><label for="allPosts">Inline comments on all posts<small>Image, video, gallery &amp; link posts</small></label><span class="switch"><input id="allPosts" type="checkbox"><span></span></span></div>
   <div class="row"><label for="prefetch">Preload on hover<small>Faster opening; uses a little of your Reddit request allowance</small></label><span class="switch"><input id="prefetch" type="checkbox"><span></span></span></div>
   <div class="row"><label for="autoComments">Show comments on text posts automatically</label><span class="switch"><input id="autoComments" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="commentSort">Sort comments by<small>Also changes when you pick a sort under a post</small></label>
+    <select id="commentSort"><option value="confidence">Best</option><option value="top">Top</option><option value="new">New</option><option value="controversial">Controversial</option><option value="old">Old</option><option value="qa">Q&amp;A</option></select></div>
+  <div class="row"><label for="collapseAutoMod">Collapse AutoModerator comments</label><span class="switch"><input id="collapseAutoMod" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="threadColors">Colour thread lines by depth</label><span class="switch"><input id="threadColors" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Filters</h2>
+  <div class="row"><label for="filterPosts">Hide matching posts in feeds</label><span class="switch"><input id="filterPosts" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="filterComments">Collapse matching comments</label><span class="switch"><input id="filterComments" type="checkbox"><span></span></span></div>
+  <label class="field" for="filterKeywords">Keywords<small>One per line. Whole words, any case. /regex/i also works.</small></label>
+  <textarea id="filterKeywords" rows="3" spellcheck="false" placeholder="spoilers&#10;/polls?/i"></textarea>
+  <p class="warn" id="filterKeywordsWarn" hidden></p>
+  <label class="field" for="filterSubs">Subreddits<small>Posts only. One per line, e.g. r/funny</small></label>
+  <textarea id="filterSubs" rows="2" spellcheck="false" placeholder="r/funny"></textarea>
+  <p class="warn" id="filterSubsWarn" hidden></p>
+  <label class="field" for="filterUsers">Users<small>Posts and comments. One per line, e.g. u/someone</small></label>
+  <textarea id="filterUsers" rows="2" spellcheck="false" placeholder="u/someone"></textarea>
+  <p class="warn" id="filterUsersWarn" hidden></p>
+</section>
+
+<section>
+  <h2>Read posts</h2>
+  <div class="row"><label for="markRead">Remember posts I open<small>Expanded inline or visited; kept on this computer only</small></label><span class="switch"><input id="markRead" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="dimRead">Dim them in feeds</label><span class="switch"><input id="dimRead" type="checkbox"><span></span></span></div>
+  <button id="clearRead" class="wide" title="Forget every post marked as read" disabled>Read history is empty</button>
+</section>
+
+<section>
+  <h2>Hide clutter</h2>
+  <div class="row"><label for="hidePromoted">Promoted posts<small>In feeds, the sidebar and comment threads</small></label><span class="switch"><input id="hidePromoted" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="hideRecommended">Recommended posts on Home<small>Shows only communities you've joined</small></label><span class="switch"><input id="hideRecommended" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="hideTrending">Trending in search</label><span class="switch"><input id="hideTrending" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="hideUpsells">Premium &amp; Advertise links<small>Also Reddit Pro</small></label><span class="switch"><input id="hideUpsells" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="hideAwards">Award buttons</label><span class="switch"><input id="hideAwards" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Page</h2>
+  <div class="row"><label for="scrollToTop">Back-to-top button<small>Appears once you scroll down</small></label><span class="switch"><input id="scrollToTop" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="unstickHeader">Let the header scroll away<small>Reddit's top bar stops following you down the page</small></label><span class="switch"><input id="unstickHeader" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="exactTimes">Exact times on hover<small>Full date and time on "5h ago"</small></label><span class="switch"><input id="exactTimes" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Keyboard</h2>
+  <div class="row"><label for="keyboard">Keyboard shortcuts<small>J/K posts · Enter expand · C comments · ? for all</small></label><span class="switch"><input id="keyboard" type="checkbox"><span></span></span></div>
 </section>
 
 <section>
@@ -88,12 +151,13 @@
     <li>Drag the <b>orange rails</b> beside the feed; double-click one to reset.</li>
     <li>Hover media and drag a <b>corner or side handle</b> to resize past the column.</li>
     <li>Drag <b>✥ Move</b> to float a player anywhere. <b>Ctrl + scroll</b> over media zooms it.</li>
-    <li><b>Esc</b> docks a floating player. Ctrl/middle-click still opens posts in a new tab.</li>
+    <li><b>Esc</b> docks a floating player. <b>⧉ Pop out</b> remembers where you last left it.</li>
+    <li>Hover a video for <b>▣ PiP</b> and <b>↓ Download</b>. Ctrl/middle-click still opens posts in a new tab.</li>
   </ul>
 </section>
 
 <footer>
-  <button id="resetMedia" title="Put every resized or floating player back">Reset media</button>
+  <button id="resetMedia" title="Put every resized or floating player back, and forget where the floating window was">Reset media</button>
   <button id="resetAll" title="Restore all settings">Reset all</button>
 </footer>
 <script src="settings.js"></script>
