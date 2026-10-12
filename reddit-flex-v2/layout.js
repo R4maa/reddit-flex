@@ -199,6 +199,8 @@
     mutationTimer = setTimeout(() => { mutationTimer = 0; place(); }, 200);
   }).observe(document.body, {childList: true, subtree: true});
   addEventListener('resize', place);
+  // With the header scrolling away (polish.js), the rails' top follows it.
+  addEventListener('scroll', () => { if (html.classList.contains('rf-unstick-header')) place(); }, {passive: true});
   // Overlays like the image viewer open/close on click or Escape; re-check once they've rendered.
   const recheck = () => { place(); setTimeout(place, 120); setTimeout(place, 400); };
   addEventListener('click', recheck, true);

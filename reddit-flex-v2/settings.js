@@ -181,8 +181,8 @@
       const hit = document.elementFromPoint(x, y);
       if (!hit) continue;
       total++;
-      // Our own UI (rails, media handles) never counts as covering.
-      const ours = hit.id === 'rf-media-ui' || hit.id === 'rf-layout-ui' ||
+      // Our own UI (rails, media handles, the back-to-top button) never counts as covering.
+      const ours = hit.id === 'rf-media-ui' || hit.id === 'rf-layout-ui' || hit.id === 'rf-top-ui' ||
         (ignoreFloating && !!hit.closest?.('[data-rf-floating]'));
       if (!ours && !scope.contains(hit) && !hit.contains(scope)) covered++;
     }
