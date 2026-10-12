@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reddit Flex</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1b; --muted: #6b7075; --line: #e6e8ea; --card: #f6f7f8;
+    --accent: #ff4500; --accent-soft: rgba(255, 69, 0, .12);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111214; --fg: #eceef0; --muted: #9aa0a6; --line: #26282b; --card: #1a1c1f; --accent-soft: rgba(255, 69, 0, .18); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 330px; background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { display: flex; align-items: center; gap: 10px; padding: 16px 18px 12px; }
+  header img { width: 30px; height: 30px; }
+  h1 { margin: 0; font-size: 16px; letter-spacing: -.2px; }
+  header p { margin: 0; color: var(--muted); font-size: 12px; }
+  header .master { margin-left: auto; }
+  section { padding: 12px 18px; border-top: 1px solid var(--line); }
+  h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+  .row label { cursor: pointer; flex: 1; }
+  .row small { display: block; color: var(--muted); font-size: 11.5px; }
+  .width-head { display: flex; align-items: baseline; justify-content: space-between; }
+  .width-head output { font-variant-numeric: tabular-nums; font-weight: 700; }
+  input[type=range] { width: 100%; accent-color: var(--accent); margin: 8px 0 6px; }
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 7px 6px; transition: background .12s, border-color .12s; }
+  button:hover { border-color: var(--accent); }
+  button.on { background: var(--accent-soft); border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* switches */
+  .switch { position: relative; width: 36px; height: 20px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(16px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tips { margin: 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
+  .tips li { margin: 3px 0; }
+  .tips b { color: var(--fg); font-weight: 600; }
+  footer { display: flex; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+  footer button { flex: 1; }
+  body.off section { opacity: .45; pointer-events: none; }
+</style>
+</head>
+<body>
+<header>
+  <img src="icons/icon48.png" alt="">
+  <div><h1>Reddit Flex</h1><p>Your feed, your layout.</p></div>
+  <label class="switch master" title="Turn Reddit Flex on or off"><input id="enabled" type="checkbox" aria-label="Enable Reddit Flex"><span></span></label>
+</header>
+
+<section>
+  <div class="width-head"><h2>Feed width</h2><output id="widthOut"></output></div>
+  <input id="width" type="range" min="420" max="2400" step="10" aria-label="Feed column width">
+  <div class="presets">
+    <button data-width="640">Narrow</button>
+    <button data-width="900">Default</button>
+    <button data-width="1200">Wide</button>
+    <button data-width="1600">Ultra</button>
+  </div>
+  <div class="row"><label for="hideRight">Hide right sidebar</label><span class="switch"><input id="hideRight" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="hideLeft">Hide left navigation</label><span class="switch"><input id="hideLeft" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Media</h2>
+  <div class="row"><label for="media">Resize &amp; move videos and images</label><span class="switch"><input id="media" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="lockRatio">Keep proportions<small>Hold Shift while dragging to flip this</small></label><span class="switch"><input id="lockRatio" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Posts</h2>
+  <div class="row"><label for="accordion">Expand text posts in place</label><span class="switch"><input id="accordion" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="allPosts">Inline comments on all posts<small>Image, video, gallery &amp; link posts</small></label><span class="switch"><input id="allPosts" type="checkbox"><span></span></span></div>
+  <div class="row"><label for="autoComments">Show comments on text posts automatically</label><span class="switch"><input id="autoComments" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>How to</h2>
+  <ul class="tips">
+    <li>Drag the <b>orange rails</b> beside the feed; double-click one to reset.</li>
+    <li>Hover media and drag a <b>corner or side handle</b> to resize past the column.</li>
+    <li>Drag <b>✥ Move</b> to float a player anywhere. <b>Ctrl + scroll</b> over media zooms it.</li>
+    <li><b>Esc</b> docks a floating player. Ctrl/middle-click still opens posts in a new tab.</li>
+  </ul>
+</section>
+
+<footer>
+  <button id="resetMedia" title="Put every resized or floating player back">Reset media</button>
+  <button id="resetAll" title="Restore all settings">Reset all</button>
+</footer>
+<script src="settings.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+/* ===== Feed column width ===== */
+html.rf-enabled #subgrid-container {
+  width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + 48px)) !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+html.rf-enabled .main-container:has(> #main-content) {
+  grid-template-columns: minmax(0, var(--rf-width, 900px)) minmax(0, 316px) !important;
+  justify-content: center !important;
+}
+html.rf-enabled #main-content { min-width: 0 !important; max-width: none !important; width: 100% !important; }
+html.rf-enabled #main-content shreddit-feed,
+html.rf-enabled #main-content shreddit-post,
+html.rf-enabled #main-content article { max-width: none !important; }
+
+html.rf-enabled.rf-hide-right #right-sidebar-container { display: none !important; }
+html.rf-enabled.rf-hide-right .main-container:has(> #main-content) {
+  grid-template-columns: minmax(0, var(--rf-width, 900px)) !important;
+}
+html.rf-enabled.rf-hide-left #left-sidebar-container,
+html.rf-enabled.rf-hide-left #flex-left-nav-container { display: none !important; }
+html.rf-enabled.rf-hide-left .grid-container:has(#subgrid-container) { grid-template-columns: minmax(0, 1fr) !important; }
+html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important; margin-inline: auto !important; }
+
+/* Presets, double-click reset and sidebar toggles glide instead of jumping. */
+html.rf-animate #subgrid-container { transition: width .32s cubic-bezier(.22, .8, .24, 1) !important; }
+html.rf-animate .main-container:has(> #main-content) { transition: grid-template-columns .32s cubic-bezier(.22, .8, .24, 1) !important; }
+
+@media (max-width: 959px) {
+  html.rf-enabled #subgrid-container { width: 100% !important; }
+  html.rf-enabled .main-container:has(> #main-content) { grid-template-columns: minmax(0, 1fr) !important; }
+  html.rf-enabled #right-sidebar-container { display: none !important; }
+}
+
+html.rf-dragging, html.rf-dragging * { user-select: none !important; }
+html.rf-dragging iframe { pointer-events: none !important; }
+
+/* ===== Media sizing ===== */
+[data-rf-sized] {
+  position: relative;
+  width: var(--rf-media-w) !important;
+  height: var(--rf-media-h) !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  margin-left: calc((100% - var(--rf-media-w)) / 2 + var(--rf-media-shift, 0px)) !important;
+  margin-right: 0 !important;
+  z-index: 10;
+}
+[data-rf-wide-ancestor] { overflow: visible !important; z-index: 20 !important; }
+[data-rf-sized] [data-aspect-ratio-container],
+[data-rf-sized] gallery-carousel,
+[data-rf-sized] shreddit-player,
+[data-rf-sized] shreddit-player-2,
+[data-rf-sized] shreddit-embed,
+[data-rf-sized] video,
+[data-rf-sized] iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  max-width: none !important;
+  aspect-ratio: auto !important;
+}
+[data-rf-sized] > a { display: block !important; width: 100% !important; height: 100% !important; }
+[data-rf-sized] img:not([role="presentation"]) { object-fit: contain !important; max-height: 100% !important; }
+[data-rf-sized] > a > img, [data-rf-sized] > img { width: 100% !important; height: 100% !important; }
+[data-rf-sized] gallery-carousel > ul { height: 100% !important; max-height: none !important; }
+
+/* ===== Floating player (top layer via the Popover API; ancestor fallback otherwise) ===== */
+[data-rf-floating] {
+  position: fixed !important;
+  inset: auto !important;
+  left: var(--rf-x) !important;
+  top: var(--rf-y) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: #000 !important;
+  color: inherit !important;
+  overflow: hidden !important;
+  border-radius: 12px !important;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08) !important;
+  z-index: 2147483600 !important;
+}
+[data-rf-floating]::backdrop { display: none !important; }
+[data-rf-float-ancestor] { overflow: visible !important; transform: none !important; filter: none !important; contain: none !important; z-index: 2147483500 !important; }
+
+.rf-placeholder {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 2px dashed rgba(127, 127, 127, .4);
+  background: rgba(127, 127, 127, .08);
+  cursor: pointer;
+  transition: background .15s;
+}
+.rf-placeholder:hover { background: rgba(255, 69, 0, .1); border-color: rgba(255, 69, 0, .6); }
+.rf-placeholder-btn { font: 600 13px/1.3 system-ui, sans-serif; opacity: .8; padding: 12px; text-align: center; }
+
+/* ===== Text post accordion ===== */
+.rf-acc {
+  display: block;
+  position: relative;
+  z-index: 3;
+  cursor: auto;
+  margin: 2px 0 4px;
+  overflow-anchor: none;
+}
+.rf-acc * { overflow-anchor: none; }
+.rf-acc.rf-acc-outside { padding: 4px 16px 12px; }
+
+.rf-md { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.rf-md > :first-child { margin-top: 0; }
+.rf-md > :last-child { margin-bottom: 0; }
+/* Reddit wraps text in <div class="md">; trim nested edge margins and keep them from leaking
+   out of the box (a leaked margin left a gap in the comment thread lines). */
+.rf-md { display: flow-root; }
+.rf-md > .md > :first-child, .rf-md > div:only-child > :first-child { margin-top: 0; }
+.rf-md > .md > :last-child, .rf-md > div:only-child > :last-child, .rf-md li:last-child > :last-child { margin-bottom: 0; }
+.rf-md p { margin: 0 0 .8em; }
+.rf-md a { color: inherit; text-decoration: underline; text-decoration-color: rgba(127, 127, 127, .6); text-underline-offset: 2px; }
+.rf-md a:hover { text-decoration-color: currentColor; }
+.rf-md blockquote { margin: 0 0 .8em; padding: 2px 0 2px 12px; border-left: 3px solid rgba(127, 127, 127, .45); opacity: .9; }
+.rf-md pre { margin: 0 0 .8em; padding: 10px 12px; border-radius: 8px; background: rgba(127, 127, 127, .14); overflow: auto; }
+.rf-md code { font: .88em/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; background: rgba(127, 127, 127, .14); padding: .1em .35em; border-radius: 4px; }
+.rf-md pre code { background: none; padding: 0; }
+.rf-md ul, .rf-md ol { margin: 0 0 .8em; padding-left: 1.6em; }
+.rf-md ul { list-style: disc; }
+.rf-md ol { list-style: decimal; }
+.rf-md li { margin: .2em 0; }
+.rf-md h1, .rf-md h2, .rf-md h3, .rf-md h4, .rf-md h5, .rf-md h6 { font-size: 1.08em; font-weight: 700; margin: 1em 0 .4em; }
+.rf-md hr { border: 0; border-top: 1px solid rgba(127, 127, 127, .3); margin: 1em 0; }
+.rf-md table { display: block; overflow: auto; border-collapse: collapse; margin: 0 0 .8em; }
+.rf-md th, .rf-md td { border: 1px solid rgba(127, 127, 127, .3); padding: 4px 9px; }
+.rf-md img { max-width: 100%; height: auto; border-radius: 8px; }
+.rf-md .md-spoiler-text { background: rgba(127, 127, 127, .55); color: transparent; border-radius: 4px; cursor: pointer; transition: color .15s, background .15s; }
+.rf-md .md-spoiler-text * { visibility: hidden; }
+.rf-md .md-spoiler-text.rf-revealed { background: rgba(127, 127, 127, .16); color: inherit; }
+.rf-md .md-spoiler-text.rf-revealed * { visibility: visible; }
+.rf-acc-empty { opacity: .65; font-style: italic; }
+
+.rf-acc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 2px; }
+.rf-acc-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(127, 127, 127, .35);
+  background: transparent;
+  color: inherit;
+  font: 600 12px/1 system-ui, sans-serif;
+  padding: 8px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-decoration: none !important;
+  transition: background .12s, border-color .12s;
+}
+.rf-acc-btn:hover { background: rgba(127, 127, 127, .14); border-color: rgba(127, 127, 127, .55); }
+.rf-acc-btn:focus-visible { outline: 2px solid #ff4500; outline-offset: 2px; }
+
+.rf-skel {
+  height: 12px;
+  margin: 9px 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(127, 127, 127, .12) 0%, rgba(127, 127, 127, .28) 50%, rgba(127, 127, 127, .12) 100%);
+  background-size: 200% 100%;
+  animation: rf-shimmer 1.1s linear infinite;
+}
+@keyframes rf-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Comments live in a capped, scrollable sub-window so the next posts stay within reach.
+   Scrolling past its end continues into the page. */
+.rf-acc-comments {
+  margin-top: 12px;
+  padding: 2px 14px 14px;
+  box-sizing: border-box;
+  max-height: var(--rf-comments-h, 440px);
+  overflow-y: auto;
+  border: 1px solid rgba(127, 127, 127, .25);
+  border-radius: 12px 12px 0 0;
+  background: rgba(127, 127, 127, .05);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(127, 127, 127, .5) transparent;
+}
+.rf-acc-grip {
+  height: 14px;
+  border: 1px solid rgba(127, 127, 127, .25);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: rgba(127, 127, 127, .08);
+  cursor: ns-resize;
+  touch-action: none;
+  position: relative;
+  transition: background .12s;
+}
+.rf-acc-grip::after { content: ''; position: absolute; left: 50%; top: 5px; width: 36px; height: 4px; margin-left: -18px; border-radius: 4px; background: rgba(127, 127, 127, .55); }
+.rf-acc-grip:hover, html.rf-resizing-comments .rf-acc-grip { background: rgba(255, 69, 0, .14); }
+.rf-acc-grip:hover::after, html.rf-resizing-comments .rf-acc-grip::after { background: #ff4500; }
+html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !important; }
+/* Reddit-style thread tree: avatar, a line down from it, rounded elbows into each reply. */
+.rf-c { --rf-av: 26px; --rf-g: 34px; --rf-pt: 0px; --rf-line: rgba(127, 127, 127, .38); --rf-x: calc(var(--rf-av) / 2 - var(--rf-g) - 1px); position: relative; }
+/* Top-level threads: a clear gap and a divider so it's obvious where one ends and the next starts. */
+.rf-acc-comments > .rf-c { --rf-pt: 16px; padding: 16px 0 8px; }
+.rf-acc-comments > .rf-c + .rf-c { --rf-pt: 24px; margin-top: 14px; padding-top: 24px; border-top: 1px solid rgba(127, 127, 127, .22); }
+.rf-c-kids > .rf-c { --rf-pt: 12px; padding-top: 12px; }
+.rf-c-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: var(--rf-av); font: 12.5px/1.4 system-ui, sans-serif; cursor: pointer; }
+.rf-c-avatar { flex: none; width: var(--rf-av); height: var(--rf-av); border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: hsl(var(--rf-hue, 200) 50% 42%); color: #fff; font: 700 12px/1 system-ui, sans-serif; }
+.rf-c-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Names stay full-contrast; only score, time and separators are dimmed. */
+.rf-c-head > :not(.rf-c-author):not(.rf-c-op):not(.rf-c-pin):not(.rf-c-avatar) { opacity: .6; }
+.rf-c-author { font-weight: 700; font-size: 13px; color: inherit; opacity: 1; text-decoration: none; letter-spacing: .1px; }
+.rf-c-author:hover { text-decoration: underline; }
+.rf-c-op { color: #ff4500; font-weight: 800; }
+.rf-c-pin { color: #46d160; font-weight: 700; }
+.rf-c-content { margin-left: var(--rf-g); }
+.rf-c-body { position: relative; margin-top: 2px; }
+/* Line from the avatar down past the comment body... */
+.rf-c:has(> .rf-c-content > .rf-c-kids > .rf-c) > .rf-c-content > .rf-c-body::before { content: ''; position: absolute; left: var(--rf-x); top: -2px; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
+/* ...a rounded elbow into each reply, and the line continuing only until the last reply. */
+.rf-c-kids > .rf-c::before { content: ''; position: absolute; left: var(--rf-x); top: 0; width: calc(var(--rf-g) - var(--rf-av) / 2 - 3px); height: calc(12px + var(--rf-av) / 2 + 1px); box-sizing: border-box; border-left: 2px solid var(--rf-line); border-bottom: 2px solid var(--rf-line); border-bottom-left-radius: 12px; pointer-events: none; }
+.rf-c-kids > .rf-c.rf-c-moreitem::before { height: 23px; }
+.rf-c-kids > .rf-c:not(:last-child)::after { content: ''; position: absolute; left: var(--rf-x); top: 0; bottom: 0; width: 2px; background: var(--rf-line); pointer-events: none; }
+/* Invisible hit area over the line: hover lights up the thread, click collapses it. */
+.rf-c-line { position: absolute; left: calc(var(--rf-av) / 2 - 9px); top: calc(var(--rf-pt) + var(--rf-av)); bottom: 0; width: 18px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 1; }
+.rf-c:not(:has(> .rf-c-content > .rf-c-kids > .rf-c)) > .rf-c-line { display: none; }
+/* Hovering the line or avatar lights up that comment's whole thread. */
+.rf-c:has(> .rf-c-line:hover, > .rf-c-head > .rf-c-avatar:hover) > .rf-c-content > .rf-c-body::before,
+.rf-c:has(> .rf-c-line:hover, > .rf-c-head > .rf-c-avatar:hover) > .rf-c-content > .rf-c-kids > .rf-c::after { background: #ff4500 !important; }
+.rf-c:has(> .rf-c-line:hover, > .rf-c-head > .rf-c-avatar:hover) > .rf-c-content > .rf-c-kids > .rf-c::before { border-color: #ff4500 !important; }
+.rf-c-avatar { cursor: pointer; transition: box-shadow .12s; }
+.rf-c-avatar:hover { box-shadow: 0 0 0 2px #ff4500; }
+.rf-c-head { cursor: auto; }
+.rf-c.rf-collapsed > .rf-c-head { cursor: pointer; }
+.rf-c-count:empty { display: none; }
+.rf-c-count { opacity: 1 !important; padding: 2px 8px; border-radius: 999px; background: rgba(127, 127, 127, .2); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.rf-c.rf-collapsed > .rf-c-content, .rf-c.rf-collapsed > .rf-c-line { display: none; }
+.rf-c.rf-collapsed > .rf-c-head > :not(.rf-c-count) { opacity: .55; }
+.rf-c-moreitem .rf-c-more { margin-top: 0; padding-left: 4px; }
+.rf-c-more { display: inline-block; margin-top: 8px; font: 600 12px/1.4 system-ui, sans-serif; color: inherit; opacity: .75; text-decoration: none; }
+.rf-c-more:hover { opacity: 1; text-decoration: underline; }
+.rf-acc-all { margin-top: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-skel { animation: none; }
+  html.rf-animate #subgrid-container, html.rf-animate .main-container:has(> #main-content) { transition: none !important; }
+}
