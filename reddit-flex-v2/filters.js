@@ -26,18 +26,32 @@
     return !!(title || sub || author);
   }
 
-  // Comments are collapsed (with Reddit's own `collapsed` attribute), not removed, so a click
-  // still opens one. A comment is collapsed once; if the user opens it, it stays open.
+  // Reddit wraps each comment in a <details>; closing it is Reddit's own collapsed look, and its
+  // summary opens it again. (Older builds used a `collapsed` attribute on the comment instead.)
+  function setCollapsed(c, on) {
+    const d = c.querySelector(':scope > details');
+    if (d) d.open = !on;
+    else c.toggleAttribute('collapsed', on);
+  }
+  // The comment's own body. Replies are nested inside the comment and come after its body, so the
+  // first match is ours unless the comment has no body (deleted); then it belongs to a reply.
+  function bodyOf(c) {
+    const b = c.querySelector('[slot="comment"]');
+    return b?.closest('shreddit-comment') === c ? b : null;
+  }
+
+  // Comments are collapsed, not removed, so a click still opens one.
+  // A comment is collapsed once; if the user opens it, it stays open.
   function checkComment(c) {
     const was = c.getAttribute('data-rf-filtered');
-    const text = c.querySelector(':scope > [slot="comment"]')?.textContent || '', author = c.getAttribute('author') || '';
+    const text = bodyOf(c)?.textContent || '', author = c.getAttribute('author') || '';
     const reason = s.enabled ? filter.comment({text, author}) : '';
     if (reason && !was) {
       c.setAttribute('data-rf-filtered', reason);
-      c.setAttribute('collapsed', '');
+      setCollapsed(c, true);
     } else if (!reason && was) {
       c.removeAttribute('data-rf-filtered'); // no longer matches: undo our collapse
-      c.removeAttribute('collapsed');
+      setCollapsed(c, false);
     }
     return !!(text.trim() || author);
   }
