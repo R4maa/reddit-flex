@@ -39,6 +39,10 @@
     const a = deepActive();
     return editable(target) || editable(a) || !!a?.isContentEditable;
   }
+  // Reddit's dropdown menus (e.g. a post's "…" menu) open next to their button inside the post's
+  // shadow DOM and take focus, so they don't cover the feed; their own keys must win.
+  const MENU = '[role="menu"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="listbox"], [role="option"], faceplate-menu';
+  const inMenu = () => !!deepActive()?.closest?.(MENU);
 
   // Posts in page order, skipping ones that are hidden (e.g. filtered out).
   function posts() {
@@ -193,7 +197,7 @@
       return;
     }
     if (typingIn(e.composedPath()[0])) return;
-    if (overlayOpen()) return; // leave Reddit's own dialogs, menus and image viewer alone
+    if (inMenu() || overlayOpen()) return; // leave Reddit's own dialogs, menus and image viewer alone
 
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     let handled = true;
