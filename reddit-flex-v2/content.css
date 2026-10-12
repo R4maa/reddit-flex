@@ -286,3 +286,19 @@ html.rf-dim-read shreddit-post[data-rf-read] { transition: opacity .15s; }
 
 /* ===== Keyboard navigation ===== */
 shreddit-post[data-rf-kbd] { outline: 2px solid #ff4500 !important; outline-offset: 3px; border-radius: 16px; }
+
+/* ===== Hide clutter ===== */
+/* Each option is an html class set by clutter.js. Trending searches are the exception: they sit in
+   the search box's shadow root, so clutter.js styles them there. */
+/* Promoted posts in feeds (and the divider after them), in the sidebar and in comment threads. */
+html.rf-enabled.rf-hide-promoted :is(shreddit-ad-post, shreddit-sidebar-ad, shreddit-comments-page-ad, shreddit-comment-tree-ads, shreddit-comment-tree-ad),
+html.rf-enabled.rf-hide-promoted shreddit-ad-post + hr { display: none !important; }
+/* "Advertise" (header and left nav), "Reddit Pro" (left nav), "Premium" (user menu). */
+html.rf-enabled.rf-hide-upsells :is(advertise-button, faceplate-tracker:is([noun="advertise_menu"], [noun="reddit_pro_menu"], [noun="premium_menu"])) { display: none !important; }
+/* Home feed posts from communities you haven't joined ("Because you've visited…"). Logged in only:
+   logged out, no post is from a joined community. (Logged out, Reddit's home feed is the
+   popular-feed and posts carry no user-logged-in attribute; both guards hold on their own.) */
+html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > article:has(> shreddit-post[user-logged-in]:not([is-subscribed])),
+html.rf-enabled.rf-hide-recommended shreddit-feed[reload-url*="home-feed"] > article:has(> shreddit-post[user-logged-in]:not([is-subscribed])) + hr { display: none !important; }
+/* The "Award" button under comments (posts already hide theirs). */
+html.rf-enabled.rf-hide-awards award-button { display: none !important; }

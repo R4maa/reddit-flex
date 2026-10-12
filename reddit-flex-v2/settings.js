@@ -32,6 +32,11 @@
     filterUsers: [],
     markRead: true,
     dimRead: true,
+    hidePromoted: false,
+    hideUpsells: false,
+    hideRecommended: false,
+    hideTrending: false,
+    hideAwards: false,
   });
 
   // Validates one value against the type of its default: booleans, clamped numbers, enums,

@@ -2,7 +2,7 @@
 (() => {
   const RF = RedditFlex;
   const $ = id => document.getElementById(id);
-  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors', 'filterPosts', 'filterComments', 'markRead', 'dimRead'];
+  const toggles = ['enabled', 'hideRight', 'hideLeft', 'media', 'lockRatio', 'accordion', 'allPosts', 'prefetch', 'autoComments', 'keyboard', 'collapseAutoMod', 'threadColors', 'filterPosts', 'filterComments', 'markRead', 'dimRead', 'hidePromoted', 'hideUpsells', 'hideRecommended', 'hideTrending', 'hideAwards'];
   const lists = {filterKeywords: 'keyword', filterSubs: 'name', filterUsers: 'name'};
   let s = {...RF.defaults};
   let saveTimer = 0;
