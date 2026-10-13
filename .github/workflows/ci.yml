@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, manifest and package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax
+        run: for f in reddit-flex-v2/*.js eslint.config.mjs test-harness/*.js test-harness/tools/*.mjs; do node --check "$f"; done
+      - name: Lint
+        run: npx -y eslint@9
+      - name: Manifest
+        run: node test-harness/tools/check-manifest.mjs
+      - name: Store zip
+        run: |
+          version=$(node -p "require('./reddit-flex-v2/manifest.json').version")
+          git archive --format=zip -o "reddit-flex-$version.zip" HEAD:reddit-flex-v2
+          echo "ZIP=reddit-flex-$version.zip" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reddit-flex-zip
+          path: ${{ env.ZIP }}
+
+  tests:
+    name: Mock suites and real Chrome
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chrome
+        run: google-chrome --version
+      - name: Mock suites
+        run: node test-harness/tools/test.mjs
+      - name: Real Chrome (extension loaded, real worker and sync storage)
+        run: node test-harness/tools/real-chrome.mjs
