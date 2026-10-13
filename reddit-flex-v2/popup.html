@@ -45,8 +45,11 @@
   .tips { margin: 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
   .tips li { margin: 3px 0; }
   .tips b { color: var(--fg); font-weight: 600; }
-  footer { display: flex; gap: 8px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+  footer { display: flex; gap: 8px; padding: 12px 18px 10px; border-top: 1px solid var(--line); }
   footer button { flex: 1; }
+  .support { margin: 0; padding: 0 18px 14px; text-align: center; color: var(--muted); font-size: 12px; }
+  .support a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .support a:hover, .support a:focus-visible { text-decoration: underline; }
   body.off section { opacity: .45; pointer-events: none; }
   .field { display: block; margin: 10px 0 4px; font-weight: 600; }
   .field small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 400; }
@@ -168,6 +171,7 @@
   <button id="resetMedia" title="Put every resized or floating player back, and forget where the floating window was">Reset media</button>
   <button id="resetAll" title="Restore all settings">Reset all</button>
 </footer>
+<p class="support">Enjoying Reddit Flex? <a id="kofi" href="https://ko-fi.com/rama2019" target="_blank" rel="noopener">Support it on Ko-fi</a></p>
 <script src="settings.js"></script>
 <script src="popup.js"></script>
 </body>

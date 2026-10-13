@@ -147,6 +147,9 @@ window.__popupTest = async () => {
   ok('Reset all turns per-page widths off and resets them', (await stored()).widthPerPage === false && Object.values((await stored()).widths).every(w => w === 900));
   ok('Reset all empties the lists', $('filterKeywords').value === '' && (await stored()).filterKeywords.length === 0);
   ok('Reset all turns the clutter options off', !$('hideAwards').checked && (await stored()).hideAwards === false);
+  // Ko-fi link at the very bottom, opening in a new tab
+  const kofi = $('kofi');
+  ok('a Ko-fi link sits at the bottom of the popup and opens in a new tab', kofi?.href === 'https://ko-fi.com/rama2019' && kofi.target === '_blank' && kofi.relList.contains('noopener') && kofi.closest('p') === [...document.body.children].filter(e => e.tagName !== 'SCRIPT').at(-1), kofi?.outerHTML);
   const fail = results.filter(r => !r.pass);
   return {pass: results.length - fail.length, fail: fail.length, failures: fail};
 };
