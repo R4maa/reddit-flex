@@ -155,7 +155,8 @@ window.__kbTest = async () => {
   const natives = [...page.children];
   const hb = () => RF.headerBottom() + 12;
   const nrel = c => c.getBoundingClientRect().top - hb();
-  scrollTo(0, scrollY + nrel(natives[0])); await sleep(100);
+  // (Instant, and again until it holds: a slower machine may still be settling the layout.)
+  for (let i = 0; i < 10 && Math.abs(nrel(natives[0])) >= 1; i++) { scrollTo({top: scrollY + nrel(natives[0]), behavior: 'instant'}); await sleep(100); }
   ok('fixture: first native comment at the top', Math.abs(nrel(natives[0])) < 2, nrel(natives[0]));
   ok('N handled on a post page', press('n')); await sleep(700);
   ok('N aligns the next native comment', Math.abs(nrel(natives[1])) < 3, nrel(natives[1]));
