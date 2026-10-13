@@ -8,5 +8,7 @@ desktop.ini
 .vscode/
 *.zip
 
-# Local mock-Reddit test page (kept out of the repo)
-test-harness/
+# Test harness: pages built by test-harness/build.js, and local patch backups
+test-harness/bundle.html
+test-harness/popup-bundle.html
+test-harness/*.patch

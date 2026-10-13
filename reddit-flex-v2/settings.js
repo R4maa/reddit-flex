@@ -119,14 +119,69 @@
   const FILTER_KEYS = ['filterPosts', 'filterComments', 'filterKeywords', 'filterSubs', 'filterUsers'];
   const filterKey = s => JSON.stringify(FILTER_KEYS.map(k => s[k]));
 
+  // ---- storage ----------------------------------------------------------------------------
+  // Pages always read and write chrome.storage.local. When this computer's AREA_KEY says 'sync',
+  // the background worker (sync.js) mirrors the settings to chrome.storage.sync and brings other
+  // computers' changes back. Only the settings object syncs: read history (redditFlexRead), the
+  // floating player's spot (redditFlexFloat) and the reset signal stay on this computer.
+  const AREA_KEY = 'redditFlexArea';
+  const SYNC_ERROR_KEY = 'redditFlexSyncError';
+
+  // The settings as this page last knew them: from storage, or its own latest save. A save sends
+  // only what differs from these, so it can't undo a change this page hadn't heard of yet.
+  let seen = null;
+  // This page's own latest save (not others' changes, unlike seen).
+  let last = null;
+  try { chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[KEY]) seen = normalize(changes[KEY].newValue); }); } catch {}
+
   async function read() {
-    try { return normalize((await chrome.storage.local.get(KEY))[KEY]); }
-    catch { return {...defaults}; }
+    try {
+      const s = normalize((await chrome.storage.local.get(KEY))[KEY]);
+      seen ||= s;
+      return s;
+    } catch { return {...defaults}; }
   }
 
+  // Asks the background worker; rejects when it can't be reached.
+  async function ask(msg) {
+    const r = await chrome.runtime.sendMessage(msg);
+    if (!r?.ok) throw new Error(r?.error || 'No answer from Reddit Flex');
+    return r.result;
+  }
+
+  // Saves go through the background worker, one at a time in the order made, so they can't race
+  // turning sync on or off or a change from another page. Never rejects: callers fire and forget.
   function save(value) {
-    try { return chrome.storage.local.set({[KEY]: normalize(value)}); }
-    catch { return Promise.resolve(); } // extension reloaded underneath an open tab
+    // (Before its first read, a page's settings are the defaults it started from, plus its changes.)
+    const s = normalize(value), base = seen || normalize(defaults);
+    seen = last = s;
+    // Without the worker (none answering, or it stopped before saying it was done; also the test
+    // harness), the page applies its own changes itself, the same way the worker would. Another page
+    // doing the same at that moment writes back the settings as it read them, which can put back the
+    // old value of what this page changed: so it looks again a little later and reapplies what was
+    // put back (a few times at most), unless this page has changed it again since.
+    const direct = async () => {
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      let todo = Object.keys(s).filter(k => !same(s[k], base[k]));
+      for (let i = 0; todo.length && i < 5; i++) {
+        if (i) await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+        const now = normalize((await chrome.storage.local.get(KEY))[KEY]);
+        if (i) todo = todo.filter(k => same(last[k], s[k]) && same(now[k], base[k]));
+        if (todo.length) await chrome.storage.local.set({[KEY]: normalize({...now, ...Object.fromEntries(todo.map(k => [k, s[k]]))})});
+      }
+    };
+    let sent;
+    try { sent = chrome.runtime?.sendMessage ? ask({type: 'rf-save', settings: s, base}) : null; } catch { sent = null; }
+    if (!sent) return direct().catch(() => {});
+    return sent.catch(() => direct()).catch(() => {}); // (extension reloaded under the page: nothing to save to)
+  }
+
+  // Turns syncing on or off for this computer: 'adopted' | 'merged' | 'uploaded' | 'on' | 'local'. Rejects
+  // (changing nothing) when turning on with settings too big to sync.
+  const setSync = on => ask({type: 'rf-sync', on: !!on});
+  async function syncOn() {
+    try { return (await chrome.storage.local.get(AREA_KEY))[AREA_KEY] === 'sync'; }
+    catch { return false; }
   }
 
   function requestReset() {
@@ -189,5 +244,5 @@
     return total > 0 && covered / total > .5;
   }
 
-  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, parsePattern, makeFilter, filterKey, pageType, widthFor, PAGE_TYPES, MIN_W, MAX_W, RANGES, ENUMS};
+  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, setSync, syncOn, KEY, AREA_KEY, SYNC_ERROR_KEY, headerBottom, isCovered, parsePattern, makeFilter, filterKey, pageType, widthFor, PAGE_TYPES, MIN_W, MAX_W, RANGES, ENUMS};
 })();

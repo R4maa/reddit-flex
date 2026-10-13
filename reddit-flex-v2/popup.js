@@ -69,9 +69,43 @@
   $('resetMedia').addEventListener('click', () => RF.requestReset());
   $('resetAll').addEventListener('click', () => { commit(RF.defaults, true); RF.requestReset(); });
 
-  RF.read().then(v => { s = v; render(); });
+  // Sync: on/off, which extension ID other computers need, and the last sync error.
+  const extensionId = globalThis.chrome?.runtime?.id;
+  // note: what turning on just did ('On. Using …'), said before which installs share the settings.
+  async function showSync(note = '') {
+    const on = await RF.syncOn();
+    const err = on && (await chrome.storage.local.get(RF.SYNC_ERROR_KEY))[RF.SYNC_ERROR_KEY];
+    $('sync').checked = on;
+    $('syncNote').textContent = on
+      ? `${note || 'On.'} Another computer shares these settings only if its Reddit Flex has the same extension ID${extensionId ? ` (${extensionId})` : ''}. Installs from the same store listing share one; unpacked copies need the same manifest key.`
+      : 'Off: settings are kept on this computer only.';
+    $('syncWarn').hidden = !err?.message;
+    $('syncWarn').textContent = err?.message ? `Not synced: ${err.message} Your change is kept on this computer.` : '';
+  }
+  $('sync').addEventListener('change', async e => {
+    const on = e.target.checked;
+    $('sync').disabled = true;
+    try {
+      const result = await RF.setSync(on);
+      const notes = {
+        adopted: 'On. Using the settings already synced from another computer.',
+        merged: 'On. Using the synced settings, plus what you changed here since this computer last synced.',
+      };
+      await showSync(notes[result] || '');
+    } catch (err) {
+      await showSync();
+      $('syncWarn').hidden = false;
+      $('syncWarn').textContent = err?.message || 'Could not turn sync on';
+    } finally {
+      $('sync').disabled = false;
+    }
+  });
+
+  RF.subscribe(v => { s = v; render(); });
+  showSync();
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.redditFlex) { s = RF.normalize(changes.redditFlex.newValue); render(); }
     if (area === 'local' && changes[READ_KEY]) showReadCount(readCount(changes[READ_KEY].newValue));
+    // (While the switch is busy, its own handler shows the outcome.)
+    if (area === 'local' && (changes[RF.SYNC_ERROR_KEY] || changes[RF.AREA_KEY]) && !$('sync').disabled) showSync();
   });
 })();

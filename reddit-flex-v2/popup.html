@@ -54,6 +54,7 @@
   textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   button.wide { width: 100%; margin-top: 6px; }
   .warn { margin: 4px 0 0; color: #d93a00; font-size: 11.5px; }
+  .hint { margin: 4px 0 0; color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -143,6 +144,13 @@
 <section>
   <h2>Keyboard</h2>
   <div class="row"><label for="keyboard">Keyboard shortcuts<small>J/K posts · Enter expand · C comments · ? for all</small></label><span class="switch"><input id="keyboard" type="checkbox"><span></span></span></div>
+</section>
+
+<section>
+  <h2>Sync</h2>
+  <div class="row"><label for="sync">Sync settings with Chrome<small>Through your Chrome account; filter lists can sync up to about 98 KB in all (roughly 300 long lines). Read history and the floating player's spot stay on this computer.</small></label><span class="switch"><input id="sync" type="checkbox"><span></span></span></div>
+  <p class="hint" id="syncNote"></p>
+  <p class="warn" id="syncWarn" hidden></p>
 </section>
 
 <section>
