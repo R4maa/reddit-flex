@@ -1,7 +1,9 @@
 /* Background worker: saves Reddit videos for the content scripts (they can't call chrome.downloads),
    and runs settings sync (sync.js). */
 'use strict';
-if (typeof importScripts === 'function') importScripts('settings.js', 'sync.js');
+if (typeof importScripts === 'function') {
+  try { importScripts('settings.js', 'sync.js'); } catch (e) { console.error('Reddit Flex: settings sync did not load', e); }
+}
 
 // Only Reddit's own video hosts, over https. Anything else a page could slip into a message is refused.
 const HOSTS = ['packaged-media.redd.it', 'v.redd.it'];
@@ -40,9 +42,17 @@ function onMessage(msg, sender, reply, downloads = chrome.downloads) {
   return true;
 }
 
-if (globalThis.chrome?.runtime?.onMessage) {
-  const settingsSync = globalThis.RedditFlexSync.start(chrome);
-  chrome.runtime.onMessage.addListener((msg, sender, reply) => (msg?.type === 'rf-download' ? onMessage(msg, sender, reply) : settingsSync.onMessage(msg, sender, reply)));
+// Downloads here; settings saves and sync on/off to sync.js (when it started: without it, pages
+// get no answer and save on their own).
+function route(msg, sender, reply, settingsSync, downloads) {
+  if (msg?.type === 'rf-download') return onMessage(msg, sender, reply, downloads);
+  return settingsSync ? settingsSync.onMessage(msg, sender, reply) : false;
 }
 
-globalThis.RedditFlexBackground = {videoUrl, safeName, fromReddit, onMessage}; // for the test harness
+if (globalThis.chrome?.runtime?.onMessage) {
+  let settingsSync = null;
+  try { settingsSync = globalThis.RedditFlexSync.start(chrome); } catch (e) { console.error('Reddit Flex: settings sync did not start', e); }
+  chrome.runtime.onMessage.addListener((msg, sender, reply) => route(msg, sender, reply, settingsSync));
+}
+
+globalThis.RedditFlexBackground = {videoUrl, safeName, fromReddit, onMessage, route}; // for the test harness

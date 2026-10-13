@@ -71,13 +71,14 @@
 
   // Sync: on/off, which extension ID other computers need, and the last sync error.
   const extensionId = globalThis.chrome?.runtime?.id;
+  // note: what turning on just did ('On. Using …'), said before which installs share the settings.
   async function showSync(note = '') {
     const on = await RF.syncOn();
     const err = on && (await chrome.storage.local.get(RF.SYNC_ERROR_KEY))[RF.SYNC_ERROR_KEY];
     $('sync').checked = on;
-    $('syncNote').textContent = note || (on
-      ? `On. Another computer shares these settings only if its Reddit Flex has the same extension ID${extensionId ? ` (${extensionId})` : ''}. Installs from the same store listing share one; unpacked copies need the same manifest key.`
-      : 'Off: settings are kept on this computer only.');
+    $('syncNote').textContent = on
+      ? `${note || 'On.'} Another computer shares these settings only if its Reddit Flex has the same extension ID${extensionId ? ` (${extensionId})` : ''}. Installs from the same store listing share one; unpacked copies need the same manifest key.`
+      : 'Off: settings are kept on this computer only.';
     $('syncWarn').hidden = !err?.message;
     $('syncWarn').textContent = err?.message ? `Not synced: ${err.message} Your change is kept on this computer.` : '';
   }
