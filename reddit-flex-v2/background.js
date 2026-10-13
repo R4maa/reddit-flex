@@ -1,5 +1,7 @@
-/* Background worker: saves Reddit videos for the content scripts (they can't call chrome.downloads). */
+/* Background worker: saves Reddit videos for the content scripts (they can't call chrome.downloads),
+   and runs settings sync (sync.js). */
 'use strict';
+if (typeof importScripts === 'function') importScripts('settings.js', 'sync.js');
 
 // Only Reddit's own video hosts, over https. Anything else a page could slip into a message is refused.
 const HOSTS = ['packaged-media.redd.it', 'v.redd.it'];
@@ -38,6 +40,9 @@ function onMessage(msg, sender, reply, downloads = chrome.downloads) {
   return true;
 }
 
-if (globalThis.chrome?.runtime?.onMessage) chrome.runtime.onMessage.addListener((msg, sender, reply) => onMessage(msg, sender, reply));
+if (globalThis.chrome?.runtime?.onMessage) {
+  const settingsSync = globalThis.RedditFlexSync.start(chrome);
+  chrome.runtime.onMessage.addListener((msg, sender, reply) => (msg?.type === 'rf-download' ? onMessage(msg, sender, reply) : settingsSync.onMessage(msg, sender, reply)));
+}
 
 globalThis.RedditFlexBackground = {videoUrl, safeName, fromReddit, onMessage}; // for the test harness

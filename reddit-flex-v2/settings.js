@@ -119,14 +119,104 @@
   const FILTER_KEYS = ['filterPosts', 'filterComments', 'filterKeywords', 'filterSubs', 'filterUsers'];
   const filterKey = s => JSON.stringify(FILTER_KEYS.map(k => s[k]));
 
-  async function read() {
-    try { return normalize((await chrome.storage.local.get(KEY))[KEY]); }
-    catch { return {...defaults}; }
+  // ---- storage ----------------------------------------------------------------------------
+  // Pages always read and write chrome.storage.local. When this computer's AREA_KEY says 'sync',
+  // the background worker (sync.js) mirrors the settings to chrome.storage.sync and brings other
+  // computers' changes back. Only the settings object syncs: read history (redditFlexRead), the
+  // floating player's spot (redditFlexFloat) and the reset signal stay on this computer.
+  const AREA_KEY = 'redditFlexArea';
+  const SYNC_ERROR_KEY = 'redditFlexSyncError';
+  // Sync allows 8 KB per item and 100 KB in all, counted as key + JSON value in bytes. Filter
+  // lists can be far longer, so each list is stored in chunks: redditFlex.filterKeywords.0, .1, …
+  const LISTS = ['filterKeywords', 'filterSubs', 'filterUsers'];
+  const SYNC_ITEM = 8192 - 64, SYNC_TOTAL = 102400 - 2048; // with some room to spare
+  const bytes = str => new TextEncoder().encode(str).length;
+  const itemBytes = (key, value) => bytes(key) + bytes(JSON.stringify(value));
+
+  // The settings as sync items: {items, bytes}. Throws when they can't fit.
+  function toSync(s) {
+    const core = {...s, _chunks: {}};
+    const items = {};
+    for (const list of LISTS) {
+      delete core[list];
+      let chunk = [], n = 0;
+      const flush = () => { items[`${KEY}.${list}.${n++}`] = chunk; chunk = []; };
+      for (const line of s[list]) {
+        if (chunk.length && itemBytes(`${KEY}.${list}.${n}`, [...chunk, line]) > SYNC_ITEM) flush();
+        chunk.push(line);
+      }
+      if (chunk.length) flush();
+      core._chunks[list] = n;
+    }
+    items[KEY] = core;
+    const total = Object.entries(items).reduce((sum, [k, v]) => sum + itemBytes(k, v), 0);
+    if (total > SYNC_TOTAL) {
+      const kb = v => Math.ceil(v / 1024);
+      throw new Error(`Too much to sync: ${kb(total)} KB; the limit is ${kb(SYNC_TOTAL)} KB. Shorten the filter lists.`);
+    }
+    return {items, bytes: total};
   }
 
+  // Settings back from sync items (all of chrome.storage.sync), or null when there are none.
+  function fromSync(all) {
+    const core = all?.[KEY];
+    if (!core || typeof core !== 'object') return null;
+    const out = {...core};
+    for (const list of LISTS) {
+      const n = Math.min(Number(core._chunks?.[list]) || 0, 1000);
+      out[list] = [];
+      for (let i = 0; i < n; i++) out[list].push(...(Array.isArray(all[`${KEY}.${list}.${i}`]) ? all[`${KEY}.${list}.${i}`] : []));
+    }
+    delete out._chunks;
+    return normalize(out);
+  }
+
+  // The settings as this page last knew them: from storage, or its own latest save. A save sends
+  // only what differs from these, so it can't undo a change this page hadn't heard of yet.
+  let seen = null;
+  try { chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local' && changes[KEY]) seen = normalize(changes[KEY].newValue); }); } catch {}
+
+  async function read() {
+    try {
+      const s = normalize((await chrome.storage.local.get(KEY))[KEY]);
+      seen ||= s;
+      return s;
+    } catch { return {...defaults}; }
+  }
+
+  // Asks the background worker; rejects when it can't be reached.
+  async function ask(msg) {
+    const r = await chrome.runtime.sendMessage(msg);
+    if (!r?.ok) throw new Error(r?.error || 'No answer from Reddit Flex');
+    return r.result;
+  }
+
+  // Saves go through the background worker, one at a time in the order made, so they can't race
+  // turning sync on or off or a change from another page. Never rejects: callers fire and forget.
   function save(value) {
-    try { return chrome.storage.local.set({[KEY]: normalize(value)}); }
-    catch { return Promise.resolve(); } // extension reloaded underneath an open tab
+    const s = normalize(value), base = seen;
+    seen = s;
+    // Without the worker (none answering, or it stopped before saying it was done; also the test
+    // harness), the page applies its own changes itself, the same way the worker would.
+    const direct = async () => {
+      if (!base) return chrome.storage.local.set({[KEY]: s});
+      const changed = Object.keys(s).filter(k => JSON.stringify(s[k]) !== JSON.stringify(base[k]));
+      if (!changed.length) return;
+      const now = normalize((await chrome.storage.local.get(KEY))[KEY]);
+      await chrome.storage.local.set({[KEY]: normalize({...now, ...Object.fromEntries(changed.map(k => [k, s[k]]))})});
+    };
+    let sent;
+    try { sent = chrome.runtime?.sendMessage ? ask({type: 'rf-save', settings: s, base}) : null; } catch { sent = null; }
+    if (!sent) return direct().catch(() => {});
+    return sent.catch(() => direct()).catch(() => {}); // (extension reloaded under the page: nothing to save to)
+  }
+
+  // Turns syncing on or off for this computer: 'adopted' | 'merged' | 'uploaded' | 'on' | 'local'. Rejects
+  // (changing nothing) when turning on with settings too big to sync.
+  const setSync = on => ask({type: 'rf-sync', on: !!on});
+  async function syncOn() {
+    try { return (await chrome.storage.local.get(AREA_KEY))[AREA_KEY] === 'sync'; }
+    catch { return false; }
   }
 
   function requestReset() {
@@ -189,5 +279,5 @@
     return total > 0 && covered / total > .5;
   }
 
-  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, headerBottom, isCovered, parsePattern, makeFilter, filterKey, pageType, widthFor, PAGE_TYPES, MIN_W, MAX_W, RANGES, ENUMS};
+  globalThis.RedditFlex = {defaults, normalize, read, save, subscribe, requestReset, setSync, syncOn, toSync, fromSync, KEY, AREA_KEY, SYNC_ERROR_KEY, headerBottom, isCovered, parsePattern, makeFilter, filterKey, pageType, widthFor, PAGE_TYPES, MIN_W, MAX_W, RANGES, ENUMS};
 })();
