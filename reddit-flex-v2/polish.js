@@ -23,7 +23,8 @@
   <button id="top" title="Back to top" aria-label="Back to top" hidden>↑</button>`;
   html.append(host);
   const top = ui.getElementById('top');
-  top.addEventListener('click', () => scrollTo({top: 0, behavior: 'smooth'}));
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  top.addEventListener('click', () => scrollTo({top: 0, behavior: reduceMotion.matches ? 'auto' : 'smooth'}));
   // Shown once you are a screen and a half down.
   const showTop = () => { top.hidden = !(s.enabled && s.scrollToTop && scrollY > innerHeight * 1.5); };
 

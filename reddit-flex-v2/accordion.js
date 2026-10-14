@@ -13,6 +13,9 @@
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const TOP_LEVEL = 10;
   const MORE_BATCH = 100; // Reddit's limit on ids per /api/morechildren request
+  const [MIN_H, MAX_H] = RF.RANGES.commentsHeight; // comment box height limits
+  // Loaded posts kept for reopening; past this many the least recently opened go (open ones stay).
+  let cacheMax = 60;
   const SORTS = [['confidence', 'Best'], ['top', 'Top'], ['new', 'New'], ['controversial', 'Controversial'], ['old', 'Old'], ['qa', 'Q&A']];
   const moreActions = new WeakMap(); // "load more" button -> what clicking it does
 
@@ -180,10 +183,20 @@
       })
       // Fall back to Reddit's own post page markup, unless we're being rate limited.
       .catch(err => { if (err instanceof RateLimited) throw err; return loadFromPage(permalink); })
-      .then(data => { resolved.set(id, data); return data; });
+      .then(data => { resolved.set(id, data); trimCache(); return data; });
     pending.set(id, p);
     p.catch(() => pending.delete(id));
     return p;
+  }
+
+  // Drops the least recently opened posts past cacheMax (Map order: oldest first), never an open one.
+  function trimCache() {
+    if (resolved.size <= cacheMax) return;
+    const inUse = new Set([...open.keys()].map(postIdOf));
+    for (const id of resolved.keys()) {
+      if (resolved.size <= cacheMax) break;
+      if (!inUse.has(id)) { resolved.delete(id); pending.delete(id); }
+    }
   }
 
   async function loadFromPage(permalink) {
@@ -443,7 +456,8 @@
     if (!data || st.panel.querySelector('.rf-acc-comments')) return;
     morph(st.panel, animate, () => {
       const wrap = el('div', {class: 'rf-acc-comments'});
-      st.panel.append(wrap, el('div', {class: 'rf-acc-grip', role: 'separator', 'aria-orientation': 'horizontal',
+      st.panel.append(wrap, el('div', {class: 'rf-acc-grip', role: 'separator', tabindex: '0', 'aria-orientation': 'horizontal',
+        'aria-valuemin': MIN_H, 'aria-valuemax': MAX_H, 'aria-valuenow': s.commentsHeight,
         'aria-label': 'Resize comments', title: 'Drag to resize comments · double-click to reset'}));
       if (data.full) fillComments(post, wrap);
       else wrap.append(el('a', {class: 'rf-c-more', href: new URL(data.permalink, location.origin).href}, 'Open the thread to read comments →'));
@@ -546,8 +560,10 @@
     if (snippet) snippet.style.setProperty('display', 'none', 'important');
 
     const cached = resolved.get(id);
-    if (cached) renderBody(panel, cached, post);
-    else panel.append(skeleton());
+    if (cached) {
+      resolved.delete(id); resolved.set(id, cached); // now the most recently opened
+      renderBody(panel, cached, post);
+    } else panel.append(skeleton());
     animateHeight(panel, h0, panel.getBoundingClientRect().height);
 
     if (!cached) {
@@ -683,17 +699,24 @@
 
   // Drag the grip under a comment box to set how tall comment boxes are (remembered).
   const html = document.documentElement;
-  const [MIN_H, MAX_H] = RF.RANGES.commentsHeight;
-  const setBoxHeight = h => html.style.setProperty('--rf-comments-h', `${h}px`);
+  const setBoxHeight = h => {
+    html.style.setProperty('--rf-comments-h', `${h}px`);
+    for (const g of document.querySelectorAll('.rf-acc-grip')) g.setAttribute('aria-valuenow', h);
+  };
+  const saveBoxHeight = h => {
+    s = {...s, commentsHeight: Math.round(Math.min(MAX_H, Math.max(MIN_H, h)))};
+    setBoxHeight(s.commentsHeight);
+    RF.save(s);
+  };
+  const isGrip = n => isElement(n) && n.classList.contains('rf-acc-grip');
   document.addEventListener('pointerdown', e => {
-    const grip = e.composedPath().find(n => isElement(n) && n.classList.contains('rf-acc-grip'));
-    if (!grip || e.button !== 0) return;
-    const box = grip.previousElementSibling;
-    if (!box) return;
+    const grip = e.composedPath().find(isGrip);
+    if (!grip || e.button !== 0 || !grip.previousElementSibling) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     try { grip.setPointerCapture(e.pointerId); } catch {}
-    const y0 = e.clientY, h0 = box.getBoundingClientRect().height;
+    // From the setting, not the box: a thread shorter than its cap shows a shorter box.
+    const y0 = e.clientY, h0 = s.commentsHeight;
     let h = h0;
     html.classList.add('rf-dragging', 'rf-resizing-comments');
     const move = m => { h = Math.round(Math.min(MAX_H, Math.max(MIN_H, h0 + m.clientY - y0))); setBoxHeight(h); };
@@ -702,18 +725,23 @@
       removeEventListener('pointerup', end, true);
       removeEventListener('pointercancel', end, true);
       html.classList.remove('rf-dragging', 'rf-resizing-comments');
-      s = {...s, commentsHeight: h};
-      RF.save(s);
+      if (h !== s.commentsHeight) saveBoxHeight(h); // a click alone changes nothing
     };
     addEventListener('pointermove', move, true);
     addEventListener('pointerup', end, true);
     addEventListener('pointercancel', end, true);
   }, true);
   document.addEventListener('dblclick', e => {
-    if (!e.composedPath().some(n => isElement(n) && n.classList.contains('rf-acc-grip'))) return;
-    s = {...s, commentsHeight: RF.defaults.commentsHeight};
-    setBoxHeight(s.commentsHeight);
-    RF.save(s);
+    if (e.composedPath().some(isGrip)) saveBoxHeight(RF.defaults.commentsHeight);
+  }, true);
+  // With the grip focused, ↑/↓ change the height (Shift for bigger steps), Home/End go to the limits.
+  document.addEventListener('keydown', e => {
+    if (!isGrip(e.composedPath()[0]) || e.ctrlKey || e.metaKey || e.altKey) return;
+    const step = e.shiftKey ? 100 : 20;
+    const h = {ArrowUp: s.commentsHeight - step, ArrowDown: s.commentsHeight + step, Home: MIN_H, End: MAX_H}[e.key];
+    if (h == null) return;
+    e.preventDefault();
+    saveBoxHeight(h);
   }, true);
 
   // Small API for other modules (keyboard navigation). Mirrors what a click on the card does.
@@ -734,6 +762,7 @@
       }
       return expand(post, comments);
     },
+    _test: {setCacheMax(n) { const was = cacheMax; cacheMax = n; trimCache(); return was; }},
   };
 
   // When the filter lists change, open threads follow: newly matching comments collapse, and
