@@ -208,8 +208,9 @@ html.rf-dragging iframe { pointer-events: none !important; }
   transition: background .12s;
 }
 .rf-acc-grip::after { content: ''; position: absolute; left: 50%; top: 5px; width: 36px; height: 4px; margin-left: -18px; border-radius: 4px; background: rgba(127, 127, 127, .55); }
-.rf-acc-grip:hover, html.rf-resizing-comments .rf-acc-grip { background: rgba(255, 69, 0, .14); }
-.rf-acc-grip:hover::after, html.rf-resizing-comments .rf-acc-grip::after { background: #ff4500; }
+.rf-acc-grip:hover, .rf-acc-grip:focus-visible, html.rf-resizing-comments .rf-acc-grip { background: rgba(255, 69, 0, .14); }
+.rf-acc-grip:hover::after, .rf-acc-grip:focus-visible::after, html.rf-resizing-comments .rf-acc-grip::after { background: #ff4500; }
+.rf-acc-grip:focus-visible { outline: 2px solid #ff4500; outline-offset: 2px; }
 html.rf-resizing-comments, html.rf-resizing-comments * { cursor: ns-resize !important; }
 /* Reddit-style thread tree: avatar, a line down from it, rounded elbows into each reply. */
 .rf-c { --rf-av: 26px; --rf-g: 34px; --rf-pt: 0px; --rf-line: rgba(127, 127, 127, .38); --rf-x: calc(var(--rf-av) / 2 - var(--rf-g) - 1px); position: relative; }

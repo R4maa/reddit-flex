@@ -198,6 +198,58 @@ window.__cmTest = async () => {
   acc.toggle(tmp); await sleep(700); art.remove();
   window.__noRatio = false;
 
+  // 14. The grip under the comment box sets the height of every box
+  const savedH = (await RF.read()).commentsHeight;
+  await set({commentsHeight: 1000});
+  acc.toggle(p1, {comments: true});
+  await until(() => top().length >= 4);
+  const grip = acc.panel(p1).querySelector('.rf-acc-grip');
+  const gripAt = () => { const r = grip.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + 7}; };
+  const pointer = (type, target, y, x = gripAt().x) => target.dispatchEvent(new PointerEvent(type, {bubbles: true, composed: true, cancelable: true, pointerId: 7, button: 0, isPrimary: true, clientX: x, clientY: y}));
+  ok('fixture: the thread is shorter than its 1000px cap', box().getBoundingClientRect().height < 900, box().getBoundingClientRect().height);
+  let at = gripAt();
+  pointer('pointerdown', grip, at.y); pointer('pointerup', grip, at.y); await sleep(150);
+  ok('a click on the grip leaves the height alone', (await RF.read()).commentsHeight === 1000, (await RF.read()).commentsHeight);
+  at = gripAt();
+  pointer('pointerdown', grip, at.y); pointer('pointermove', grip, at.y + 25); pointer('pointermove', grip, at.y + 50); pointer('pointerup', grip, at.y + 50); await sleep(150);
+  ok('dragging down 50px adds 50px', (await RF.read()).commentsHeight === 1050, (await RF.read()).commentsHeight);
+  grip.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, composed: true})); await sleep(150);
+  ok('double-click resets to the default', (await RF.read()).commentsHeight === RF.defaults.commentsHeight, (await RF.read()).commentsHeight);
+  grip.focus();
+  ok('the grip takes keyboard focus', document.activeElement === grip || grip.getRootNode().activeElement === grip);
+  const key = (k, opts = {}) => grip.dispatchEvent(new KeyboardEvent('keydown', {key: k, bubbles: true, composed: true, cancelable: true, ...opts}));
+  const heightAfter = async (k, opts) => { key(k, opts); await sleep(120); return (await RF.read()).commentsHeight; };
+  const d = RF.defaults.commentsHeight, [minH, maxH] = RF.RANGES.commentsHeight;
+  ok('ArrowDown adds 20px', await heightAfter('ArrowDown') === d + 20);
+  ok('Shift+ArrowUp takes 100px', await heightAfter('ArrowUp', {shiftKey: true}) === d - 80);
+  ok('Home goes to the minimum', await heightAfter('Home') === minH);
+  ok('End goes to the maximum', await heightAfter('End') === maxH);
+  ok('aria-valuenow follows the height', grip.getAttribute('aria-valuenow') === String(maxH), grip.getAttribute('aria-valuenow'));
+  ok('Ctrl+ArrowUp is left alone', await heightAfter('ArrowUp', {ctrlKey: true}) === maxH);
+  grip.blur();
+  acc.toggle(p1, {comments: true}); await sleep(700);
+  await set({commentsHeight: savedH});
+
+  // 15. Loaded posts are cached for reopening, but only so many (least recently opened go first)
+  await reset();
+  const was = acc._test.setCacheMax(2);
+  const n = Date.now(), tmps = ['tmpa', 'tmpb', 'tmpc'].map(t => {
+    const a = document.createElement('article');
+    a.innerHTML = `<shreddit-post id="t3_${t}${n}" post-type="text" view-context="SubredditFeed" permalink="/r/test/comments/${t}${n}/x/"><a slot="title" href="#">${t}</a></shreddit-post>`;
+    p1.closest('article').after(a);
+    return a.firstElementChild;
+  });
+  const openClose = async p => { acc.toggle(p); await until(() => !!acc.panel(p)?.querySelector('.rf-acc-actions')); acc.toggle(p); await sleep(700); };
+  for (const p of tmps) await openClose(p);
+  const loads = t => fetches(new RegExp(`${t}${n}.*\\.json`));
+  ok('each post loaded once', ['tmpa', 'tmpb', 'tmpc'].every(t => loads(t) === 1), ['tmpa', 'tmpb', 'tmpc'].map(loads));
+  await openClose(tmps[2]);
+  ok('the newest stays cached', loads('tmpc') === 1, loads('tmpc'));
+  await openClose(tmps[0]);
+  ok('the oldest past the limit is loaded again', loads('tmpa') === 2, loads('tmpa'));
+  acc._test.setCacheMax(was);
+  for (const p of tmps) p.closest('article').remove();
+
   await reset();
   await set({commentSort: 'confidence'});
   ok('no script errors', window.__errors.length === errorsBefore, window.__errors.slice(errorsBefore));
