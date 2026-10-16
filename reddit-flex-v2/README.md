@@ -4,6 +4,10 @@ A Chrome extension that makes the current Reddit desktop site (www.reddit.com) m
 
 ## Install
 
+Install it from the Chrome Web Store: https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh
+
+To run this folder from source instead:
+
 1. Open `chrome://extensions` and turn on **Developer mode** (top right).
 2. Click **Load unpacked** and select this `reddit-flex-v2` folder.
 3. Pin the extension from the puzzle-piece menu, then refresh your Reddit tabs.

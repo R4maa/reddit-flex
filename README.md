@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="#install"><img alt="Chrome extension" src="https://img.shields.io/badge/Chrome-extension-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh"><img alt="Available in the Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-install-4285F4?logo=googlechrome&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-ff4500">
   <img alt="Version 3.0.0" src="https://img.shields.io/badge/version-3.0.0-2ea44f">
   <img alt="Permissions: storage and downloads" src="https://img.shields.io/badge/permissions-storage%20%2B%20downloads-6e7681">
@@ -74,14 +74,19 @@ Also:
 
 ## Install
 
-> Reddit Flex isn't on the Chrome Web Store yet, so you load it as an unpacked extension.
+**[Get Reddit Flex from the Chrome Web Store](https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh)**, then pin it from the extensions menu and refresh your Reddit tabs. It works in Chrome and other Chromium browsers that can install from the Chrome Web Store, such as Edge and Brave. Updates install automatically.
+
+<details>
+<summary>Install from source instead</summary>
 
 1. Download this repository (**Code → Download ZIP**) and unzip it somewhere permanent.
 2. Open `chrome://extensions` and switch on **Developer mode** (top right).
 3. Click **Load unpacked** and choose the `reddit-flex-v2` folder.
 4. Pin Reddit Flex from the extensions menu, then refresh your Reddit tabs.
 
-To update later, replace the files and click **Reload** on the extension card.
+To update later, replace the files and click **Reload** on the extension card. An unpacked copy has a different extension ID from the store version, so the two don't share synced settings.
+
+</details>
 
 ## Using it
 
