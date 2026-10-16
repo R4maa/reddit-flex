@@ -7,6 +7,7 @@
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-ff4500">
   <img alt="Version 3.0.0" src="https://img.shields.io/badge/version-3.0.0-2ea44f">
   <img alt="Permissions: storage and downloads" src="https://img.shields.io/badge/permissions-storage%20%2B%20downloads-6e7681">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://ko-fi.com/rama2019"><img alt="Support me on Ko-fi" src="https://img.shields.io/badge/Ko--fi-support%20me-FF5E5B?logo=ko-fi&logoColor=white"></a>
 </p>
 
@@ -123,6 +124,12 @@ docs/               README assets
 - `npx eslint@9` lints the extension.
 - `node test-harness/tools/test.mjs` runs every suite in headless Chrome; `node test-harness/tools/real-chrome.mjs` tests settings sync with the extension really loaded. See [test-harness/README.md](test-harness/README.md).
 - CI runs both, plus a manifest check, on every pull request, and builds the store zip.
+
+Bug reports and pull requests are welcome. Please run the suites before opening a pull request.
+
+## License
+
+Reddit Flex is released under the [MIT License](LICENSE). You're free to use, change and share it, as long as the copyright notice comes along.
 
 ## Support
 
