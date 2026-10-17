@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh"><img alt="Available in the Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-install-4285F4?logo=googlechrome&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-ff4500">
-  <img alt="Version 3.0.0" src="https://img.shields.io/badge/version-3.0.0-2ea44f">
+  <img alt="Version 3.0.1" src="https://img.shields.io/badge/version-3.0.1-2ea44f">
   <img alt="Permissions: storage and downloads" src="https://img.shields.io/badge/permissions-storage%20%2B%20downloads-6e7681">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://ko-fi.com/rama2019"><img alt="Support me on Ko-fi" src="https://img.shields.io/badge/Ko--fi-support%20me-FF5E5B?logo=ko-fi&logoColor=white"></a>
