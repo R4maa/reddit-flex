@@ -115,7 +115,9 @@ html.rf-dragging iframe { pointer-events: none !important; }
 .rf-acc {
   display: block;
   position: relative;
-  z-index: 3;
+  /* Its own stacking context, but at z-index auto: above the card's full-post link (which comes
+     earlier) yet below Reddit's overflow menu popup (z-index 1), so Save/Follow stay clickable. */
+  isolation: isolate;
   cursor: auto;
   margin: 2px 0 4px;
   overflow-anchor: none;
@@ -153,7 +155,7 @@ html.rf-dragging iframe { pointer-events: none !important; }
 .rf-md .md-spoiler-text.rf-revealed * { visibility: visible; }
 .rf-acc-empty { opacity: .65; font-style: italic; }
 
-.rf-acc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 2px; }
+.rf-acc-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0 2px; }
 .rf-acc-btn {
   appearance: none;
   display: inline-flex;
@@ -163,7 +165,11 @@ html.rf-dragging iframe { pointer-events: none !important; }
   background: transparent;
   color: inherit;
   font: 600 12px/1 system-ui, sans-serif;
-  padding: 8px 13px;
+  /* A fixed height: glyphs from fallback fonts (↗, 💬) otherwise make some buttons taller. */
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 13px;
+  white-space: nowrap;
   border-radius: 999px;
   cursor: pointer;
   text-decoration: none !important;
@@ -264,8 +270,8 @@ html.rf-thread-colors .rf-c[data-tone="4"] { --rf-line: rgba(235, 90, 140, .6); 
 button.rf-c-more { appearance: none; background: none; border: 0; padding: 0; cursor: pointer; }
 button.rf-c-more:disabled { cursor: progress; text-decoration: none; opacity: .5; }
 .rf-c-more:focus-visible { outline: 2px solid #ff4500; outline-offset: 2px; border-radius: 4px; }
-.rf-acc-sort { appearance: auto; color-scheme: light dark; padding: 6px 10px; }
-.rf-acc-stat { margin-left: auto; align-self: center; font: 600 12px/1.4 system-ui, sans-serif; opacity: .65; }
+.rf-acc-sort { appearance: auto; color-scheme: light dark; margin: 0; padding: 0 10px; }
+.rf-acc-stat { margin-left: auto; font: 600 12px/1.4 system-ui, sans-serif; opacity: .65; }
 .rf-acc-all { margin-top: 14px; }
 
 @media (prefers-reduced-motion: reduce) {
