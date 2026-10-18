@@ -21,7 +21,7 @@ window.__popupTest = async () => {
   $('filterKeywords').blur(); await sleep(50);
   ok('on leaving, the list is saved trimmed', JSON.stringify((await stored()).filterKeywords) === '["cat","dog","/(/"]', (await stored()).filterKeywords);
   ok('and the box is tidied', $('filterKeywords').value === 'cat\ndog\n/(/', JSON.stringify($('filterKeywords').value));
-  ok('an invalid regex is flagged', !$('filterKeywordsWarn').hidden && /Ignored \/\(\/: Unterminated group/.test($('filterKeywordsWarn').textContent), $('filterKeywordsWarn').textContent);
+  ok('an invalid regex is flagged', !$('filterKeywordsWarn').hidden && /Ignored \/\(\/: (Unterminated group|unterminated parenthetical)/i.test($('filterKeywordsWarn').textContent), $('filterKeywordsWarn').textContent);
   type($('filterKeywords'), 'cat'); $('filterKeywords').dispatchEvent(new Event('change', {bubbles: true})); $('filterKeywords').blur(); await sleep(50);
   ok('the warning clears when fixed', $('filterKeywordsWarn').hidden);
 

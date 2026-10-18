@@ -75,6 +75,10 @@ window.__lyTest = async () => {
   rail.dispatchEvent(new PointerEvent('pointerup', {...po, clientX: rr.right - 92, clientY: 300}));
   await sleep(80);
   st = await stored();
+  document.documentElement.classList.add('rf-media-active'); await sleep(250);
+  ok('the rails step aside while media is hovered', getComputedStyle(rail).pointerEvents === 'none' && getComputedStyle(rail).opacity === '0', [getComputedStyle(rail).pointerEvents, getComputedStyle(rail).opacity]);
+  document.documentElement.classList.remove('rf-media-active'); await sleep(250);
+  ok('...and come back after', getComputedStyle(rail).pointerEvents === 'auto' && getComputedStyle(rail).opacity === '1', [getComputedStyle(rail).pointerEvents, getComputedStyle(rail).opacity]);
   ok('a drag saves to this type too', st.widths.subreddit < 1200 && st.widths.subreddit === cssWidth() && st.widths.home === 1000 && st.width === 820, [st.widths, cssWidth()]);
 
   // 4. Changes from the popup (or another tab) apply live to the matching type

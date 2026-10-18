@@ -216,6 +216,8 @@ window.__vdTest = async () => {
   ui.querySelector('.h.se').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, composed: true}));
   await sleep(50);
   const rk = slot1.getBoundingClientRect(), savedK = await stored();
+  const shadowStyle = () => !!p1.shadowRoot.querySelector('style[data-rf-shadow]');
+  ok('a resized player gets the fill style in its shadow root', shadowStyle());
   ok('a keyboard resize is saved', Math.round(rk.width) === Math.round(r1.width) + 20 && savedK?.w === Math.round(rk.width) && savedK.x === Math.round(rk.left), {rk: [rk.left, rk.width], savedK});
   const wheelAt = slot1.getBoundingClientRect();
   p1.dispatchEvent(new WheelEvent('wheel', {deltaY: -100, ctrlKey: true, bubbles: true, composed: true, cancelable: true, clientX: wheelAt.left + wheelAt.width / 2, clientY: wheelAt.top + wheelAt.height / 2}));
@@ -260,6 +262,7 @@ window.__vdTest = async () => {
   await sleep(50);
   await RF.requestReset(); await sleep(100);
   ok('Reset media forgets it', (await stored()) === undefined);
+  ok('...and takes the fill style out of the player again', !shadowStyle());
   p3.parentElement.scrollIntoView({block: 'center'}); await sleep(100);
   hover(p3); await until(() => !$('box').hidden);
   $('pop').click(); await sleep(150);

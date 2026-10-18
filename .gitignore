@@ -12,3 +12,6 @@ desktop.ini
 test-harness/bundle.html
 test-harness/popup-bundle.html
 test-harness/*.patch
+
+# Firefox build (test-harness/tools/build-firefox.mjs)
+dist/

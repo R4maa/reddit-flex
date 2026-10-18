@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh"><img alt="Available in the Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-install-4285F4?logo=googlechrome&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-ff4500">
-  <img alt="Version 3.0.1" src="https://img.shields.io/badge/version-3.0.1-2ea44f">
+  <img alt="Version 3.0.2" src="https://img.shields.io/badge/version-3.0.2-2ea44f">
   <img alt="Permissions: storage and downloads" src="https://img.shields.io/badge/permissions-storage%20%2B%20downloads-6e7681">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://ko-fi.com/rama2019"><img alt="Support me on Ko-fi" src="https://img.shields.io/badge/Ko--fi-support%20me-FF5E5B?logo=ko-fi&logoColor=white"></a>
@@ -88,6 +88,13 @@ To update later, replace the files and click **Reload** on the extension card. A
 
 </details>
 
+<details>
+<summary>Firefox (140 or later)</summary>
+
+The same extension, packaged for Firefox. Download `reddit-flex-firefox-<version>.zip` from the [latest release](https://github.com/R4maa/reddit-flex/releases/latest) (or build it with `node test-harness/tools/build-firefox.mjs`, which also writes `dist/firefox/`). Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose the zip (or `dist/firefox/manifest.json`). It isn't on addons.mozilla.org yet, so Firefox keeps it only until it restarts. Settings sync goes through your Firefox account instead of Chrome's.
+
+</details>
+
 ## Using it
 
 | Do this | To |
@@ -109,7 +116,7 @@ Everything else (presets, sidebars, filters, read posts, clutter, sync, autoplay
 
 - **Permissions:** `storage` holds your settings, read history and the floating player's spot on this computer. `downloads` is used only when you click **↓ Download**, and only for Reddit's own video hosts.
 - **Network:** Reddit Flex talks only to Reddit, using your normal session, to load the posts, comments, avatars and videos you open.
-- **Settings sync** is off until you turn it on. When it is on, your settings (not your read history) are stored in Chrome sync, with your Google account, like any extension's synced data.
+- **Settings sync** is off until you turn it on. When it is on, your settings (not your read history) are stored in Chrome sync, with your Google account (Firefox: Firefox sync, with your Firefox account), like any extension's synced data.
 - No analytics, no tracking, no remote code.
 
 ## Limits
@@ -127,8 +134,8 @@ docs/               README assets
 ```
 
 - `npx eslint@9` lints the extension.
-- `node test-harness/tools/test.mjs` runs every suite in headless Chrome; `node test-harness/tools/real-chrome.mjs` tests settings sync with the extension really loaded. See [test-harness/README.md](test-harness/README.md).
-- CI runs both, plus a manifest check, on every pull request, and builds the store zip.
+- `node test-harness/tools/test.mjs` runs every suite in headless Chrome; `node test-harness/tools/real-chrome.mjs` tests settings sync with the extension really loaded. Add `--firefox` to the first, or run `real-firefox.mjs`, for Firefox. See [test-harness/README.md](test-harness/README.md).
+- CI runs all of them, plus a manifest check and Mozilla's add-on lint, on every pull request, and builds both zips.
 
 Bug reports and pull requests are welcome. Please run the suites before opening a pull request.
 
