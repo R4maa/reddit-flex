@@ -189,6 +189,7 @@
     const el = rec.el;
     el.removeAttribute('data-rf-sized');
     el.removeAttribute('data-rf-zoomed');
+    unpatchShadows(el);
     for (const name of ['--rf-media-w', '--rf-media-h', '--rf-media-shift', '--rf-zoom', '--rf-zoom-ml', '--rf-base-w']) el.style.removeProperty(name);
     for (const p of rec.wide || []) p.removeAttribute('data-rf-wide-ancestor');
     for (const [n, old] of rec.unclipped || []) {
@@ -316,13 +317,24 @@
   }
 
   // ---- shadow DOM internals ---------------------------------------------------------------
+  // Added to the players' shadow roots while their media is resized, and removed with the size
+  // (Firefox has no :host-context(), so the style can't switch itself on and off).
   const innerCss = `
-    :host-context([data-rf-sized]) { max-height: none !important; height: 100% !important; --gallery-initial-height: 100% !important; }
-    :host-context([data-rf-sized]) video { width: 100% !important; height: 100% !important; max-height: none !important; object-fit: contain !important; }
-    :host-context([data-rf-sized]) #carousel-window, :host-context([data-rf-sized]) .carousel-container, :host-context([data-rf-sized]) #carousel-list { height: 100% !important; max-height: none !important; }
-    :host-context([data-rf-sized]) faceplate-carousel { height: 100% !important; max-height: none !important; }`;
+    :host { max-height: none !important; height: 100% !important; --gallery-initial-height: 100% !important; }
+    video { width: 100% !important; height: 100% !important; max-height: none !important; object-fit: contain !important; }
+    #carousel-window, .carousel-container, #carousel-list { height: 100% !important; max-height: none !important; }
+    faceplate-carousel { height: 100% !important; max-height: none !important; }`;
+  const shadowHosts = el => [el, ...el.querySelectorAll('shreddit-player,shreddit-player-2,gallery-carousel,faceplate-carousel')];
+  function unpatchShadows(el) {
+    for (const node of shadowHosts(el)) {
+      const sr = node.shadowRoot;
+      if (!sr) continue;
+      sr.querySelector('style[data-rf-shadow]')?.remove();
+      unpatchShadows(sr);
+    }
+  }
   function patchShadows(el) {
-    for (const node of [el, ...el.querySelectorAll('shreddit-player,shreddit-player-2,gallery-carousel,faceplate-carousel')]) {
+    for (const node of shadowHosts(el)) {
       const sr = node.shadowRoot;
       if (!sr) continue;
       if (!sr.querySelector('style[data-rf-shadow]')) {
@@ -549,7 +561,7 @@
         rec.ph?.remove();
         recs.delete(el);
         if (active === rec) active = null;
-      } else if (rec.w) {
+      } else if (rec.w && !rec.zoom) {
         patchShadows(el); // players can attach their shadow root late
       }
     }

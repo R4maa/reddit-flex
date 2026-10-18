@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Reddit Flex",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Resize Reddit's feed column, stretch and float video players, and expand posts and comments inline.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "downloads"],

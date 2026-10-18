@@ -21,7 +21,7 @@ window.__ftTest = async () => {
   ok('/regex/flags works', test('/^a te/i', 'keyword', 'A text') === true && test('/^a te/', 'keyword', 'A text') === false);
   const gx = RF.parsePattern('/x/g', 'keyword');
   ok('the g flag does not make one matcher flip-flop', gx.test('x') && gx.test('x') && gx.test('x'));
-  ok('an invalid regex reports an error', /Unterminated/.test(RF.parsePattern('/(/', 'keyword').error || ''));
+  ok('an invalid regex reports an error', /unterminated/i.test(RF.parsePattern('/(/', 'keyword').error || ''));
   ok('subreddit names ignore r/ and case', test('r/Pics', 'name', 'pics') === true && test('pics', 'name', 'r/PICS') === true && test('pics', 'name', 'picsart') === false);
   ok('user/name works too', test('user/Bob', 'name', 'bob') === true);
   ok('user names ignore u/ and case', test('u/Bob', 'name', 'bob') === true && test('/u/bob', 'name', 'BOB') === true && test('/u/bob/', 'name', 'bob') === true);

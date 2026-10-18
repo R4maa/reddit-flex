@@ -9,6 +9,8 @@ html.rf-enabled .main-container:has(> #main-content) {
   justify-content: center !important;
 }
 html.rf-enabled #main-content { min-width: 0 !important; max-width: none !important; width: 100% !important; }
+/* The rails step aside while media is hovered (read inside layout.js's shadow root). */
+html.rf-media-active #rf-layout-ui { --rf-rail-opacity: 0; --rf-rail-events: none; }
 html.rf-enabled #main-content shreddit-feed,
 html.rf-enabled #main-content shreddit-post,
 html.rf-enabled #main-content article { max-width: none !important; }

@@ -32,6 +32,14 @@ jobs:
         with:
           name: reddit-flex-zip
           path: ${{ env.ZIP }}
+      - name: Firefox build
+        run: node test-harness/tools/build-firefox.mjs
+      - name: Firefox lint (AMO's checks)
+        run: npx -y web-ext@8 lint -s dist/firefox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reddit-flex-firefox-zip
+          path: reddit-flex-firefox-*.zip
 
   tests:
     name: Mock suites and real Chrome
@@ -47,3 +55,18 @@ jobs:
         run: node test-harness/tools/test.mjs
       - name: Real Chrome (extension loaded, real worker and sync storage)
         run: node test-harness/tools/real-chrome.mjs
+
+  firefox:
+    name: Mock suites and real Firefox
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Firefox
+        run: firefox --version
+      - name: Mock suites
+        run: node test-harness/tools/test.mjs --firefox
+      - name: Real Firefox (add-on installed, real event page and sync storage)
+        run: node test-harness/tools/real-firefox.mjs

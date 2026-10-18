@@ -28,8 +28,8 @@
 
   // The event target stops at a closed shadow root's host, so also follow the focused element
   // down through shadow roots (Reddit's composers live several shadow roots deep).
-  // Content scripts can open closed shadow roots through chrome.dom.
-  const rootOf = el => (globalThis.chrome?.dom?.openOrClosedShadowRoot?.(el) ?? el.shadowRoot);
+  // Content scripts can open closed shadow roots through chrome.dom (Firefox: on the element).
+  const rootOf = el => (globalThis.chrome?.dom?.openOrClosedShadowRoot?.(el) ?? el.openOrClosedShadowRoot ?? el.shadowRoot);
   function deepActive() {
     let a = document.activeElement;
     for (let r; a && (r = rootOf(a))?.activeElement;) a = r.activeElement;

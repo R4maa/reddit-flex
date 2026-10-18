@@ -22,7 +22,9 @@
     .rail:hover::after, .rail.active::after, .rail:focus-visible::after { opacity: 1; transform: scaleY(1.2); }
     #pill { position: fixed; transform: translate(-50%, -50%); padding: 6px 11px; border-radius: 999px; background: rgba(20,20,22,.92); color: #fff; font: 600 12px/1 system-ui, sans-serif; box-shadow: 0 4px 16px rgba(0,0,0,.35); pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
     #pill.show { opacity: 1; }
-    :host-context(html.rf-media-active) .rail:not(.active) { opacity: 0; pointer-events: none; }
+    /* While media is hovered (html.rf-media-active), content.css sets these on the host: Firefox
+       has no :host-context(). */
+    .rail:not(.active) { opacity: var(--rf-rail-opacity, 1); pointer-events: var(--rf-rail-events, auto); }
     .rail { transition: opacity .15s; }
     [hidden] { display: none !important; }
   </style>

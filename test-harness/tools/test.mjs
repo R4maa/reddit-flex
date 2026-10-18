@@ -1,10 +1,11 @@
-// Builds the harness pages and runs every suite, several headless Chromes at once.
-// usage: node test-harness/tools/test.mjs   (RF_SYNC_RUNS=n runs the sync suite n times; exits 1 on any failure)
+// Builds the harness pages and runs every suite, several headless Chromes (or Firefoxes) at once.
+// usage: node test-harness/tools/test.mjs [--firefox]   (RF_SYNC_RUNS=n runs the sync suite n times; exits 1 on any failure)
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const run = promisify(execFile);
+const runner = process.argv.includes('--firefox') ? 'run-suites-firefox.mjs' : 'run-suites.mjs';
 const harness = fileURLToPath(new URL('..', import.meta.url)), tools = join(harness, 'tools');
 
 await run('node', [join(harness, 'build.js')]);
@@ -18,7 +19,7 @@ const groups = [
 ];
 let failed = 0;
 const outputs = await Promise.all(groups.map(async args => {
-  try { return (await run('node', [join(tools, 'run-suites.mjs'), ...args], {timeout: 900000})).stdout; }
+  try { return (await run('node', [join(tools, runner), ...args], {timeout: 900000})).stdout; }
   catch (e) { failed++; return e.stdout || `ERROR ${args.slice(1).join(' ')}: ${e.message}`; }
 }));
 for (const line of outputs.join('\n').split('\n')) {
