@@ -87,7 +87,7 @@
     html.classList.toggle('rf-pos-right', s.feedPosition === 'right');
     html.style.setProperty('--rf-right', s.hideRight ? '0px' : '340px');
     if (!dragging) setWidthVar(width());
-    if (!first) placeNow(); // now, so no frame shows the feed moved without the nav and rails
+    placeNow(); // now, so no frame shows the feed moved without the nav and rails
     place();
   }
 
@@ -101,6 +101,8 @@
       nav = n;
       if (nav) ro.observe(nav);
     }
+    const sideEl = document.getElementById('right-sidebar-container');
+    html.classList.toggle('rf-no-side', s.hideRight || !sideEl);
     const w = s.enabled && s.feedPosition !== 'center' && !s.hideLeft && main && innerWidth >= 960 ? nav?.offsetWidth : 0;
     html.classList.toggle('rf-nav-moved', !!w);
     if (!w) {
@@ -112,7 +114,7 @@
     html.style.setProperty('--rf-nav-w', `${w}px`);
     // Measured after the column is in place.
     const r = main.getBoundingClientRect(), gap = parseFloat(getComputedStyle(main.parentElement).columnGap) || 0;
-    const side = s.hideRight ? null : document.getElementById('right-sidebar-container')?.getBoundingClientRect();
+    const side = s.hideRight ? null : sideEl?.getBoundingClientRect();
     const x = s.feedPosition === 'left' ? r.right + gap : (side?.width ? side.left : r.left) - gap - w;
     html.style.setProperty('--rf-nav-x', `${Math.round(x)}px`);
     html.style.setProperty('--rf-feed-w', `${Math.round(r.width)}px`);

@@ -108,7 +108,10 @@ window.__lyTest = async () => {
   const apart = (...els) => els.every((a, i) => els.slice(i + 1).every(b => box(a).right <= box(b).left + 1 || box(b).right <= box(a).left + 1));
   const where = () => ({main: [box(main).left, box(main).right], nav: [box(leftNav).left, box(leftNav).right], side: [box(side).left, box(side).right]});
   await nav('/r/pics/');
-  await settle({widthPerPage: false, width: 600, hideLeft: false, hideRight: false, feedPosition: 'left'});
+  await settle({widthPerPage: false, width: 600, hideLeft: false, hideRight: false, feedPosition: 'center'});
+  const navTop = box(leftNav).top;
+  await settle({feedPosition: 'left'});
+  ok('left: the nav keeps its place below the header', navTop > 40 && near(box(leftNav).top, navTop), [navTop, box(leftNav).top]);
   ok('left: the feed starts at the left edge', near(box(main).left, box(sub).left + pad) && near(box(sub).left, 0), where());
   ok('...the nav comes next', near(box(leftNav).left, box(main).right + gap) && html.classList.contains('rf-nav-moved'), where());
   ok('...then the right sidebar', near(box(side).left, box(leftNav).right + gap), where());
@@ -161,6 +164,18 @@ window.__lyTest = async () => {
   ok('a nav Reddit hides stays hidden, and gets no column', !leftNav.getClientRects().length && !html.classList.contains('rf-nav-moved') && near(box(side).left, box(main).right + gap), [html.className, where()]);
   navCol.style.display = ''; dispatchEvent(new Event('resize')); await frames(); await frames();
   ok('...and comes back beside the feed when Reddit shows it again', html.classList.contains('rf-nav-moved') && near(box(leftNav).left, box(main).right + gap), where());
+
+  // Some pages (Explore, Settings) have no right sidebar, and other items in its place.
+  const extra = document.createElement('div');
+  extra.textContent = 'footer links';
+  side.replaceWith(extra);
+  dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('no sidebar on the page: left keeps feed then nav, and nothing goes under the nav', html.classList.contains('rf-no-side') && near(box(leftNav).left, box(main).right + gap) && box(extra).top >= box(main).bottom - 1 && near(box(extra).left, box(main).left), [html.className, where(), [box(extra).left, box(extra).top], box(main).bottom]);
+  await settle({feedPosition: 'right'});
+  ok('...and right puts the nav straight before the feed', near(box(leftNav).right + gap, box(main).left) && near(box(main).right, box(sub).right - pad) && box(extra).top >= box(main).bottom - 1 && near(box(extra).left, box(main).left), [where(), [box(extra).left, box(extra).top]]);
+  extra.replaceWith(side);
+  dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('...and the sidebar column comes back with the sidebar', !html.classList.contains('rf-no-side') && near(box(leftNav).right + gap, box(side).left) && near(box(side).right + gap, box(main).left), where());
 
   await settle({hideLeft: false, feedPosition: 'center'});
   ok('center again: the nav goes home', getComputedStyle(leftNav).left === '0px' && !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-w') && !html.style.getPropertyValue('--rf-nav-x'), [getComputedStyle(leftNav).left, html.className]);
