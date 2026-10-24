@@ -8,7 +8,7 @@
   const RF = RedditFlex;
   const html = document.documentElement;
   const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
-  let s = {...RF.defaults}, main = null, nav = null, raf = 0, dragging = false, animTimer = 0, pillTimer = 0;
+  let s = {...RF.defaults}, main = null, nav = null, raf = 0, dragging = false, animTimer = 0, gliding = false, pillTimer = 0;
 
   const host = document.createElement('div');
   host.id = 'rf-layout-ui';
@@ -43,6 +43,16 @@
     html.classList.add('rf-animate');
     clearTimeout(animTimer);
     animTimer = setTimeout(() => html.classList.remove('rf-animate'), 450);
+    // The nav and the rails follow the glide frame by frame (a resize alone reports a frame late,
+    // and a column that only moves doesn't report at all).
+    if (gliding) return;
+    gliding = true;
+    const step = () => {
+      placeNow();
+      if (html.classList.contains('rf-animate')) requestAnimationFrame(step);
+      else gliding = false;
+    };
+    requestAnimationFrame(step);
   }
 
   // The page type picks the width when "Width per page type" is on. Reddit changes pages without
@@ -66,7 +76,10 @@
     const prev = s, first = !apply.done;
     apply.done = true;
     s = next;
-    if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(RF.widthFor(prev, type) - width()) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft || prev.feedPosition !== s.feedPosition)) animateLayout();
+    // A new side snaps into place: gliding between column orders squeezes the feed and slides
+    // the nav across the sidebar.
+    if (prev.feedPosition !== s.feedPosition) { clearTimeout(animTimer); html.classList.remove('rf-animate'); }
+    else if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(RF.widthFor(prev, type) - width()) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft)) animateLayout();
     html.classList.toggle('rf-enabled', s.enabled);
     html.classList.toggle('rf-hide-right', s.hideRight);
     html.classList.toggle('rf-hide-left', s.hideLeft);
@@ -74,6 +87,7 @@
     html.classList.toggle('rf-pos-right', s.feedPosition === 'right');
     html.style.setProperty('--rf-right', s.hideRight ? '0px' : '340px');
     if (!dragging) setWidthVar(width());
+    if (!first) placeNow(); // now, so no frame shows the feed moved without the nav and rails
     place();
   }
 
@@ -107,26 +121,27 @@
   function place() {
     checkPage();
     if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      const m = document.getElementById('main-content');
-      if (m !== main) {
-        if (main) ro.unobserve(main);
-        main = m;
-        if (main) ro.observe(main);
-      }
-      placeNav();
-      const r = main?.getBoundingClientRect();
-      const ok = s.enabled && r && r.width > 100 && innerWidth >= 960 && !document.fullscreenElement &&
-        !document.querySelector('dialog[open]') && !RF.isCovered(main); // e.g. Reddit's image viewer
-      // The edge pinned to the side of the page doesn't move, so it has no rail.
-      for (const rail of rails) rail.hidden = !ok || rail.dataset.side === s.feedPosition;
-      if (!ok) return;
-      const top = RF.headerBottom();
-      const height = `${innerHeight - top}px`;
-      Object.assign(rails[0].style, {left: `${r.left - 8}px`, top: `${top}px`, height});
-      Object.assign(rails[1].style, {left: `${r.right + 8}px`, top: `${top}px`, height});
-    });
+    raf = requestAnimationFrame(() => { raf = 0; placeNow(); });
+  }
+
+  function placeNow() {
+    const m = document.getElementById('main-content');
+    if (m !== main) {
+      if (main) ro.unobserve(main);
+      main = m;
+      if (main) ro.observe(main);
+    }
+    placeNav();
+    const r = main?.getBoundingClientRect();
+    const ok = s.enabled && r && r.width > 100 && innerWidth >= 960 && !document.fullscreenElement &&
+      !document.querySelector('dialog[open]') && !RF.isCovered(main); // e.g. Reddit's image viewer
+    // The edge pinned to the side of the page doesn't move, so it has no rail.
+    for (const rail of rails) rail.hidden = !ok || rail.dataset.side === s.feedPosition;
+    if (!ok) return;
+    const top = RF.headerBottom();
+    const height = `${innerHeight - top}px`;
+    Object.assign(rails[0].style, {left: `${r.left - 8}px`, top: `${top}px`, height});
+    Object.assign(rails[1].style, {left: `${r.right + 8}px`, top: `${top}px`, height});
   }
 
   function showPill(text, x, y) {

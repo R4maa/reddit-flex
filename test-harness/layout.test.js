@@ -129,7 +129,9 @@ window.__lyTest = async () => {
   ok('left: a rail drag resizes the feed', st.width >= 690 && st.width <= 710 && near(box(main).width, st.width), [st.width, box(main).width]);
   ok('...and the nav follows it', near(box(leftNav).left, box(main).right + gap), where());
 
-  await settle({width: 600, feedPosition: 'right'});
+  await set({feedPosition: 'right'});
+  ok('a new side snaps into place, without the glide', !html.classList.contains('rf-animate') && near(box(leftNav).right + gap, box(side).left) && near(box(side).right + gap, box(main).left), [html.className, where()]);
+  await settle({width: 600});
   ok('right: the feed ends at the right edge', near(box(main).right, box(sub).right - pad) && near(box(sub).right, html.clientWidth), [where(), html.clientWidth]);
   ok('...after the nav and the right sidebar', near(box(side).right + gap, box(main).left) && near(box(leftNav).right + gap, box(side).left), where());
   ok('...and the pinned edge has no rail', rails[1].hidden, rails.map(r => r.hidden));
