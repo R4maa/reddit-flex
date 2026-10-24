@@ -38,6 +38,10 @@ html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important
   html.rf-enabled.rf-pos-right .grid-container:has(#main-content) > #subgrid-container { margin-inline: auto 0 !important; }
   html.rf-enabled.rf-nav-moved #subgrid-container { width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + var(--rf-nav-w, 0px) + 72px)) !important; }
   html.rf-enabled.rf-nav-moved #flex-left-nav-container { left: var(--rf-nav-x, 0px) !important; }
+  /* Collapsed, Reddit slides the nav left and lets the window edge hide it; beside the feed it would
+     cover the feed instead. Clipped to the part that shows (--rf-nav-w), which also stops clicks.
+     The other sides stay open for the collapse button, which overhangs the right edge. */
+  html.rf-enabled.rf-nav-moved #flex-left-nav-container { clip-path: inset(-100vh -100vw -100vh calc(100% - var(--rf-nav-w, 100%))) !important; }
   /* A subreddit's banner spans the feed and its sidebar; kept over the feed, the nav doesn't cut it. */
   html.rf-enabled.rf-nav-moved #subgrid-container > .masthead { width: var(--rf-feed-w, 100%) !important; }
   html.rf-enabled.rf-pos-right.rf-nav-moved #subgrid-container > .masthead { margin-left: auto !important; }

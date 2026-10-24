@@ -116,10 +116,13 @@ window.__lyTest = async () => {
   ok('...the nav comes next', near(box(leftNav).left, box(main).right + gap) && html.classList.contains('rf-nav-moved'), where());
   ok('...then the right sidebar', near(box(side).left, box(leftNav).right + gap), where());
   ok('...and the pinned edge has no rail', rails[0].hidden, rails.map(r => r.hidden));
-  leftNav.style.width = '72px'; await frames(); await frames();
-  ok('a collapsed nav takes a narrower column', html.style.getPropertyValue('--rf-nav-w') === '72px' && near(box(side).left, box(leftNav).right + gap), where());
-  leftNav.style.width = '';
-  await frames(); await frames();
+  // Reddit collapses the nav by sliding it 240px left (the window edge usually hides the rest).
+  leftNav.style.transform = 'translateX(-240px)'; document.body.click(); await sleep(450); await frames();
+  const feedHits = [120, 240, 360, 480, 600].map(y => document.elementFromPoint(box(main).right - 100, y));
+  ok('a collapsed nav takes only the strip that shows', html.style.getPropertyValue('--rf-nav-w') === '32px' && near(box(side).left, box(leftNav).right + gap), [html.style.getPropertyValue('--rf-nav-w'), where()]);
+  ok('...and its hidden part neither covers nor blocks the feed', feedHits.every(el => !leftNav.contains(el)), feedHits.map(el => el?.id || el?.tagName));
+  leftNav.style.transform = ''; document.body.click(); await sleep(450); await frames();
+  ok('opened again, it takes its full column', html.style.getPropertyValue('--rf-nav-w') === '272px' && near(box(side).left, box(leftNav).right + gap), where());
   // Dragging the right rail still resizes, and the nav follows the feed's edge.
   const rail1 = rails[1];
   rail1.hidden = false;

@@ -91,6 +91,13 @@
     place();
   }
 
+  // How much of Reddit's nav shows: collapsed, it keeps its width but slides left, leaving a strip.
+  function shownWidth(el) {
+    if (!el?.offsetWidth) return 0;
+    const shift = new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+    return Math.max(0, Math.round(el.offsetWidth + Math.min(0, shift)));
+  }
+
   // With the feed on one side, content.css leaves an empty column beside it (left: just after the
   // feed; right: just before the right sidebar) and Reddit's left nav, which is position: fixed,
   // is moved over it. Its width is measured, so a collapsed nav takes a narrower column.
@@ -103,7 +110,7 @@
     }
     const sideEl = document.getElementById('right-sidebar-container');
     html.classList.toggle('rf-no-side', s.hideRight || !sideEl);
-    const w = s.enabled && s.feedPosition !== 'center' && !s.hideLeft && main && innerWidth >= 960 ? nav?.offsetWidth : 0;
+    const w = s.enabled && s.feedPosition !== 'center' && !s.hideLeft && main && innerWidth >= 960 ? shownWidth(nav) : 0;
     html.classList.toggle('rf-nav-moved', !!w);
     if (!w) {
       html.style.removeProperty('--rf-nav-w');
