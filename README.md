@@ -4,8 +4,9 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh"><img alt="Available in the Chrome Web Store" src="https://img.shields.io/badge/Chrome_Web_Store-install-4285F4?logo=googlechrome&logoColor=white"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/reddit-flex/"><img alt="Get it on Firefox Add-ons" src="https://img.shields.io/badge/Firefox_Add--ons-install-FF7139?logo=firefoxbrowser&logoColor=white"></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Manifest-V3-ff4500">
-  <img alt="Version 3.0.2" src="https://img.shields.io/badge/version-3.0.2-2ea44f">
+  <img alt="Version 3.0.3" src="https://img.shields.io/badge/version-3.0.3-2ea44f">
   <img alt="Permissions: storage and downloads" src="https://img.shields.io/badge/permissions-storage%20%2B%20downloads-6e7681">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <a href="https://ko-fi.com/rama2019"><img alt="Support me on Ko-fi" src="https://img.shields.io/badge/Ko--fi-support%20me-FF5E5B?logo=ko-fi&logoColor=white"></a>
@@ -76,8 +77,10 @@ Also:
 
 **[Get Reddit Flex from the Chrome Web Store](https://chromewebstore.google.com/detail/reddit-flex/kpooncebbianoheddnmlfaefpfdfnndh)**, then pin it from the extensions menu and refresh your Reddit tabs. It works in Chrome and other Chromium browsers that can install from the Chrome Web Store, such as Edge and Brave. Updates install automatically.
 
+**[Get Reddit Flex from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/reddit-flex/)** for Firefox 140 or later. It's the same extension, and updates install automatically there too. Settings sync goes through your Firefox account instead of Chrome's.
+
 <details>
-<summary>Install from source instead</summary>
+<summary>Chrome from source instead</summary>
 
 1. Download this repository (**Code → Download ZIP**) and unzip it somewhere permanent.
 2. Open `chrome://extensions` and switch on **Developer mode** (top right).
@@ -89,9 +92,9 @@ To update later, replace the files and click **Reload** on the extension card. A
 </details>
 
 <details>
-<summary>Firefox (140 or later)</summary>
+<summary>Firefox from source instead</summary>
 
-The same extension, packaged for Firefox. Download `reddit-flex-firefox-<version>.zip` from the [latest release](https://github.com/R4maa/reddit-flex/releases/latest) (or build it with `node test-harness/tools/build-firefox.mjs`, which also writes `dist/firefox/`). Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose the zip (or `dist/firefox/manifest.json`). It isn't on addons.mozilla.org yet, so Firefox keeps it only until it restarts. Settings sync goes through your Firefox account instead of Chrome's.
+Download `reddit-flex-firefox-<version>.zip` from the [latest release](https://github.com/R4maa/reddit-flex/releases/latest), or build it with `node test-harness/tools/build-firefox.mjs` (which also writes `dist/firefox/`). Open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and choose the zip (or `dist/firefox/manifest.json`). Firefox keeps a temporary add-on only until it restarts, so for everyday use install it from Firefox Add-ons.
 
 </details>
 
