@@ -8,7 +8,10 @@
   body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #0b1416; color: #d7dadc; }
   reddit-header-large { display: block; position: sticky; top: 0; height: 56px; background: #0e1113; border-bottom: 1px solid #333; z-index: 5; }
   .grid-container { display: grid; grid-template-columns: 272px 1fr; }
-  #left-sidebar-container { border-right: 1px solid #333; min-height: 100vh; }
+  /* After the feed in the page but shown first, as on Reddit (order-first), so the nav paints over it. */
+  #left-sidebar-container { order: -1; border-right: 1px solid #333; min-height: 100vh; }
+  /* Like Reddit's: fixed, with top: auto, so it sits where its column starts (below the header). */
+  #flex-left-nav-container { position: fixed; left: 0; top: auto; width: 272px; height: calc(100vh - 56px); box-sizing: border-box; padding: 8px; }
   #subgrid-container { max-width: 1120px; margin: 0 auto; width: 100%; padding: 0 16px; box-sizing: border-box; }
   .main-container { display: grid; grid-template-columns: minmax(0, 756px) 316px; gap: 16px; }
   #right-sidebar-container { background: #1a1a1b; min-height: 400px; border-radius: 8px; }
@@ -136,7 +139,6 @@
 <body>
 <reddit-header-large>header</reddit-header-large>
 <div class="grid-container">
-  <div id="left-sidebar-container">left nav</div>
   <div id="subgrid-container">
     <div class="main-container">
       <main id="main-content">
@@ -163,6 +165,7 @@
       <div id="right-sidebar-container">right sidebar</div>
     </div>
   </div>
+  <div id="left-sidebar-container"><div id="flex-left-nav-container">left nav</div></div>
 </div>
 <script src="../reddit-flex-v2/settings.js"></script>
 <script src="../reddit-flex-v2/layout.js"></script>

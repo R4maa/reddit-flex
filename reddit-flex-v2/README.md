@@ -25,7 +25,7 @@ To run this folder from source instead:
 | `settings.js` | Shared defaults, validation, storage, filter matching and page helpers |
 | `background.js` | Service worker: video downloads, and starts settings sync |
 | `sync.js` | Mirrors the settings between this computer and Chrome sync (worker only) |
-| `layout.js` | Column width rails and sidebar toggles |
+| `layout.js` | Column width rails, sidebar toggles and feed position |
 | `media.js` | Media resize handles, floating player, Ctrl+scroll zoom |
 | `video.js` | Autoplay control, video download, picture-in-picture |
 | `accordion.js` | Inline posts and comments, Reddit requests and rate limits |

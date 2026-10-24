@@ -1,6 +1,7 @@
 /* ===== Feed column width ===== */
 html.rf-enabled #subgrid-container {
-  width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + 48px)) !important;
+  /* --rf-back: room for a post page's back arrow with the feed on one side (see Feed position). */
+  width: min(100%, calc(var(--rf-width, 900px) + var(--rf-back, 0px) + var(--rf-right, 340px) + 48px)) !important;
   max-width: none !important;
   min-width: 0 !important;
 }
@@ -23,6 +24,55 @@ html.rf-enabled.rf-hide-left #left-sidebar-container,
 html.rf-enabled.rf-hide-left #flex-left-nav-container { display: none !important; }
 html.rf-enabled.rf-hide-left .grid-container:has(#subgrid-container) { grid-template-columns: minmax(0, 1fr) !important; }
 html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important; margin-inline: auto !important; }
+
+/* Feed position: the feed goes to one side and the sidebars wrap to the other (left: feed, nav,
+   sidebar; right: nav, sidebar, feed). The nav's own grid column goes; layout.js sets rf-nav-moved
+   and moves the nav (position: fixed) over an empty "nav" column beside the feed. */
+@media (min-width: 960px) {
+  /* Only pages with a feed (#main-content) are rearranged; layout.js moves the nav only there. */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#subgrid-container #main-content) { grid-template-columns: minmax(0, 1fr) !important; }
+  /* Out of the grid, but Reddit still decides whether it shows (it hides the nav below 1200px).
+     No inset: the nav (top: auto) sits where its container would, just below the header. */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#main-content) > #left-sidebar-container { position: absolute !important; width: 0 !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#main-content) > #subgrid-container { grid-column: 1 / -1 !important; }
+  html.rf-enabled.rf-pos-left .grid-container:has(#main-content) > #subgrid-container { margin-inline: 0 auto !important; }
+  html.rf-enabled.rf-pos-right .grid-container:has(#main-content) > #subgrid-container { margin-inline: auto 0 !important; }
+  html.rf-enabled.rf-nav-moved #subgrid-container { width: min(100%, calc(var(--rf-width, 900px) + var(--rf-back, 0px) + var(--rf-right, 340px) + var(--rf-nav-w, 0px) + 72px)) !important; }
+  /* A post page's back arrow sits 40px left of the post: the feed column gets that much more room,
+     with the feed at its end, so the arrow neither leaves the window nor touches the sidebar. */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) #subgrid-container:has(> .main-container > #main-content pdp-back-button) { --rf-back: 40px; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container > #main-content:has(pdp-back-button) { margin-inline-start: var(--rf-back, 0px) !important; width: auto !important; }
+  html.rf-enabled.rf-nav-moved #flex-left-nav-container { left: var(--rf-nav-x, 0px) !important; }
+  /* Collapsed, Reddit slides the nav left and lets the window edge hide it; beside the feed it would
+     cover the feed instead. Clipped to the part that shows (--rf-nav-w), which also stops clicks.
+     The other sides stay open for the collapse button, which overhangs the right edge. */
+  html.rf-enabled.rf-nav-moved #flex-left-nav-container { clip-path: inset(-100vh -100vw -100vh calc(100% - var(--rf-nav-w, 100%))) !important; }
+  /* A subreddit's banner spans the feed and its sidebar; kept over the feed, the nav doesn't cut it. */
+  html.rf-enabled.rf-nav-moved #subgrid-container > .masthead { width: var(--rf-feed-w, 100%) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved #subgrid-container > .masthead { margin-left: auto !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) > #main-content { grid-area: feed !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) > #right-sidebar-container { grid-area: side !important; }
+  /* rf-no-side (layout.js): the sidebar is hidden or the page has none (Explore, Settings).
+     The nav's cell is held, so other items (Explore's footer links) go below, not under the nav. */
+  html.rf-enabled.rf-nav-moved .main-container:has(> #main-content)::before { content: ''; grid-area: nav; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) > :not(#main-content, #right-sidebar-container) { grid-column: feed !important; }
+  /* Explore caps this grid at 1072px; the columns above already set its size. */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) { max-width: none !important; }
+  html.rf-enabled.rf-pos-left .main-container:has(> #main-content) {
+    justify-content: start !important;
+    grid-template: "feed side" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) minmax(0, 316px) !important;
+  }
+  html.rf-enabled.rf-pos-left.rf-nav-moved .main-container:has(> #main-content) { grid-template: "feed nav side" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) var(--rf-nav-w) minmax(0, 316px) !important; }
+  html.rf-enabled.rf-pos-left.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-left.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "feed nav" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) var(--rf-nav-w) !important; }
+  html.rf-enabled.rf-pos-right .main-container:has(> #main-content) {
+    justify-content: end !important;
+    grid-template: "side feed" / minmax(0, 316px) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important;
+  }
+  html.rf-enabled.rf-pos-right.rf-nav-moved .main-container:has(> #main-content) { grid-template: "nav side feed" / var(--rf-nav-w) minmax(0, 316px) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-right.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "nav feed" / var(--rf-nav-w) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+}
 
 /* Presets, double-click reset and sidebar toggles glide instead of jumping. */
 html.rf-animate #subgrid-container { transition: width .32s cubic-bezier(.22, .8, .24, 1) !important; }

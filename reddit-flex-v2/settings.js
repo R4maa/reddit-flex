@@ -9,7 +9,8 @@
   const RANGES = {width: [MIN_W, MAX_W], commentsHeight: [180, 1400], ...Object.fromEntries(PAGE_TYPES.map(t => [`widths.${t}`, [MIN_W, MAX_W]]))};
   // Settings limited to a fixed set of values; the first one listed is the fallback.
   // commentSort uses the values of Reddit's `sort` parameter; 'confidence' is "Best".
-  const ENUMS = {commentSort: ['confidence', 'top', 'new', 'controversial', 'old', 'qa']};
+  // feedPosition: where the feed column sits; the sidebars wrap to its other side.
+  const ENUMS = {commentSort: ['confidence', 'top', 'new', 'controversial', 'old', 'qa'], feedPosition: ['center', 'left', 'right']};
   const defaults = Object.freeze({
     enabled: true,
     width: 900,
@@ -18,6 +19,7 @@
     widths: Object.freeze({home: 900, subreddit: 900, post: 900, other: 900}),
     hideRight: false,
     hideLeft: false,
+    feedPosition: 'center',
     media: true,
     lockRatio: true,
     autoplay: true,

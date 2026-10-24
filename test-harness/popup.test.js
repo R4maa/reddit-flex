@@ -143,7 +143,15 @@ window.__popupTest = async () => {
   ok('switching back on does not overwrite them', (await stored()).widths.post === 700);
   $('widthPerPage').click(); await sleep(30);
 
+  // Feed position
+  ok('feed position starts centered', $('feedPosition').value === 'center');
+  $('feedPosition').value = 'left'; $('feedPosition').dispatchEvent(new Event('change')); await sleep(30);
+  ok('picking a side saves it', (await stored()).feedPosition === 'left');
+  await chrome.storage.local.set({redditFlex: {...(await stored()), feedPosition: 'right'}}); await sleep(50);
+  ok('...and a change from elsewhere shows up', $('feedPosition').value === 'right', $('feedPosition').value);
+
   $('resetAll').click(); await sleep(50);
+  ok('Reset all centers the feed again', $('feedPosition').value === 'center' && (await stored()).feedPosition === 'center');
   ok('Reset all turns per-page widths off and resets them', (await stored()).widthPerPage === false && Object.values((await stored()).widths).every(w => w === 900));
   ok('Reset all empties the lists', $('filterKeywords').value === '' && (await stored()).filterKeywords.length === 0);
   ok('Reset all turns the clutter options off', !$('hideAwards').checked && (await stored()).hideAwards === false);
