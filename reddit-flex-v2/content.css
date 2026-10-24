@@ -29,7 +29,8 @@ html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important
    and moves the nav (position: fixed) over an empty "nav" column beside the feed. */
 @media (min-width: 960px) {
   html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#subgrid-container) { grid-template-columns: minmax(0, 1fr) !important; }
-  html.rf-enabled:is(.rf-pos-left, .rf-pos-right):not(.rf-hide-left) #left-sidebar-container { display: contents !important; }
+  /* Out of the grid, but Reddit still decides whether it shows (it hides the nav below 1200px). */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) #left-sidebar-container { position: absolute !important; inset: 0 auto auto 0 !important; width: 0 !important; }
   html.rf-enabled:is(.rf-pos-left, .rf-pos-right) #subgrid-container { grid-column: 1 / -1 !important; }
   html.rf-enabled.rf-pos-left #subgrid-container { margin-inline: 0 auto !important; }
   html.rf-enabled.rf-pos-right #subgrid-container { margin-inline: auto 0 !important; }

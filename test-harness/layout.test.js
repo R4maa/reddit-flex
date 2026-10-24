@@ -132,6 +132,14 @@ window.__lyTest = async () => {
   await set({feedPosition: 'right'});
   ok('a new side snaps into place, without the glide', !html.classList.contains('rf-animate') && near(box(leftNav).right + gap, box(side).left) && near(box(side).right + gap, box(main).left), [html.className, where()]);
   await settle({width: 600});
+  // Switching sides in the middle of a glide (here a new width) stops the glide at once.
+  await set({width: 1000});
+  const midGlide = html.classList.contains('rf-animate');
+  await set({feedPosition: 'left'});
+  const snapped = box(main).width;
+  await sleep(450);
+  ok('a new side mid-glide snaps too, with the nav already beside the feed', midGlide && !html.classList.contains('rf-animate') && near(box(leftNav).left, box(main).right + gap) && near(box(main).width, snapped), [midGlide, snapped, html.className, where()]);
+  await settle({width: 600, feedPosition: 'right'});
   ok('right: the feed ends at the right edge', near(box(main).right, box(sub).right - pad) && near(box(sub).right, html.clientWidth), [where(), html.clientWidth]);
   ok('...after the nav and the right sidebar', near(box(side).right + gap, box(main).left) && near(box(leftNav).right + gap, box(side).left), where());
   ok('...and the pinned edge has no rail', rails[1].hidden, rails.map(r => r.hidden));
@@ -144,6 +152,15 @@ window.__lyTest = async () => {
   ok('left, no nav: feed then sidebar, nothing moved', !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-x') && near(box(side).left, box(main).right + gap) && near(box(main).left, pad), where());
   await settle({feedPosition: 'right'});
   ok('right, no nav: sidebar then feed', near(box(side).right + gap, box(main).left) && apart(main, side), where());
+
+  // Reddit hides the nav's column in narrower windows (below 1200px). It must stay hidden, with
+  // no column kept for it.
+  await settle({hideLeft: false, feedPosition: 'left'});
+  const navCol = document.getElementById('left-sidebar-container');
+  navCol.style.display = 'none'; dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('a nav Reddit hides stays hidden, and gets no column', !leftNav.getClientRects().length && !html.classList.contains('rf-nav-moved') && near(box(side).left, box(main).right + gap), [html.className, where()]);
+  navCol.style.display = ''; dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('...and comes back beside the feed when Reddit shows it again', html.classList.contains('rf-nav-moved') && near(box(leftNav).left, box(main).right + gap), where());
 
   await settle({hideLeft: false, feedPosition: 'center'});
   ok('center again: the nav goes home', getComputedStyle(leftNav).left === '0px' && !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-w') && !html.style.getPropertyValue('--rf-nav-x'), [getComputedStyle(leftNav).left, html.className]);
