@@ -1,6 +1,7 @@
 /* ===== Feed column width ===== */
 html.rf-enabled #subgrid-container {
-  width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + 48px)) !important;
+  /* --rf-back: room for a post page's back arrow with the feed on one side (see Feed position). */
+  width: min(100%, calc(var(--rf-width, 900px) + var(--rf-back, 0px) + var(--rf-right, 340px) + 48px)) !important;
   max-width: none !important;
   min-width: 0 !important;
 }

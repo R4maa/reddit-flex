@@ -198,6 +198,12 @@ window.__lyTest = async () => {
   ok('post page, left: the back arrow stays in the window, the feed keeps its width', box(back).width === 32 && box(back).left >= 0 && near(box(main).width, 600) && near(box(leftNav).left, box(main).right + gap), [box(back).left, box(main).width, where()]);
   await settle({feedPosition: 'right'});
   ok('post page, right: the back arrow clears the sidebar', box(back).width === 32 && box(back).left >= box(side).right + gap - 1 && near(box(main).width, 600) && near(box(main).right, box(sub).right - pad), [box(back).left, box(side).right, box(main).width]);
+  // With the nav hidden there's no nav column, and the room still comes on top of the set width.
+  await settle({feedPosition: 'left', hideLeft: true});
+  ok('post page, nav hidden, left: the feed keeps its width too', box(back).width === 32 && box(back).left >= 0 && near(box(main).width, 600) && near(box(side).left, box(main).right + gap), [box(back).left, box(main).width, where()]);
+  await settle({feedPosition: 'right'});
+  ok('post page, nav hidden, right: the same', box(back).left >= box(side).right + gap - 1 && near(box(main).width, 600), [box(back).left, box(side).right, box(main).width]);
+  await settle({hideLeft: false});
   back.remove(); post.style.position = '';
   await settle({feedPosition: 'left'});
   ok('...and other pages get no extra room', near(box(main).left, box(sub).left + pad), where());
