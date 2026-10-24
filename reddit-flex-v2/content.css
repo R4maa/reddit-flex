@@ -36,7 +36,11 @@ html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important
   html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#main-content) > #subgrid-container { grid-column: 1 / -1 !important; }
   html.rf-enabled.rf-pos-left .grid-container:has(#main-content) > #subgrid-container { margin-inline: 0 auto !important; }
   html.rf-enabled.rf-pos-right .grid-container:has(#main-content) > #subgrid-container { margin-inline: auto 0 !important; }
-  html.rf-enabled.rf-nav-moved #subgrid-container { width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + var(--rf-nav-w, 0px) + 72px)) !important; }
+  html.rf-enabled.rf-nav-moved #subgrid-container { width: min(100%, calc(var(--rf-width, 900px) + var(--rf-back, 0px) + var(--rf-right, 340px) + var(--rf-nav-w, 0px) + 72px)) !important; }
+  /* A post page's back arrow sits 40px left of the post: the feed column gets that much more room,
+     with the feed at its end, so the arrow neither leaves the window nor touches the sidebar. */
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) #subgrid-container:has(> .main-container > #main-content pdp-back-button) { --rf-back: 40px; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container > #main-content:has(pdp-back-button) { margin-inline-start: var(--rf-back, 0px) !important; width: auto !important; }
   html.rf-enabled.rf-nav-moved #flex-left-nav-container { left: var(--rf-nav-x, 0px) !important; }
   /* Collapsed, Reddit slides the nav left and lets the window edge hide it; beside the feed it would
      cover the feed instead. Clipped to the part that shows (--rf-nav-w), which also stops clicks.
@@ -55,18 +59,18 @@ html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important
   html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) { max-width: none !important; }
   html.rf-enabled.rf-pos-left .main-container:has(> #main-content) {
     justify-content: start !important;
-    grid-template: "feed side" / minmax(0, var(--rf-width, 900px)) minmax(0, 316px) !important;
+    grid-template: "feed side" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) minmax(0, 316px) !important;
   }
-  html.rf-enabled.rf-pos-left.rf-nav-moved .main-container:has(> #main-content) { grid-template: "feed nav side" / minmax(0, var(--rf-width, 900px)) var(--rf-nav-w) minmax(0, 316px) !important; }
-  html.rf-enabled.rf-pos-left.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, var(--rf-width, 900px)) !important; }
-  html.rf-enabled.rf-pos-left.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "feed nav" / minmax(0, var(--rf-width, 900px)) var(--rf-nav-w) !important; }
+  html.rf-enabled.rf-pos-left.rf-nav-moved .main-container:has(> #main-content) { grid-template: "feed nav side" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) var(--rf-nav-w) minmax(0, 316px) !important; }
+  html.rf-enabled.rf-pos-left.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-left.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "feed nav" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) var(--rf-nav-w) !important; }
   html.rf-enabled.rf-pos-right .main-container:has(> #main-content) {
     justify-content: end !important;
-    grid-template: "side feed" / minmax(0, 316px) minmax(0, var(--rf-width, 900px)) !important;
+    grid-template: "side feed" / minmax(0, 316px) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important;
   }
-  html.rf-enabled.rf-pos-right.rf-nav-moved .main-container:has(> #main-content) { grid-template: "nav side feed" / var(--rf-nav-w) minmax(0, 316px) minmax(0, var(--rf-width, 900px)) !important; }
-  html.rf-enabled.rf-pos-right.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, var(--rf-width, 900px)) !important; }
-  html.rf-enabled.rf-pos-right.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "nav feed" / var(--rf-nav-w) minmax(0, var(--rf-width, 900px)) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved .main-container:has(> #main-content) { grid-template: "nav side feed" / var(--rf-nav-w) minmax(0, 316px) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-right.rf-no-side .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved.rf-no-side .main-container:has(> #main-content) { grid-template: "nav feed" / var(--rf-nav-w) minmax(0, calc(var(--rf-width, 900px) + var(--rf-back, 0px))) !important; }
 }
 
 /* Presets, double-click reset and sidebar toggles glide instead of jumping. */

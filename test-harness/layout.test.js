@@ -190,6 +190,18 @@ window.__lyTest = async () => {
   dispatchEvent(new Event('resize')); await frames(); await frames();
   ok('...and the feed goes to its side again when it is back', html.classList.contains('rf-nav-moved') && near(box(main).left, box(sub).left + pad) && near(box(leftNav).left, box(main).right + gap), where());
 
+  // A post page's back arrow sits 40px left of the post (Reddit positions it there).
+  const post = main.querySelector('article'), back = document.createElement('pdp-back-button');
+  back.style.cssText = 'position: absolute; left: -40px; top: 0; width: 32px; height: 32px; display: block;';
+  post.style.position = 'relative'; post.prepend(back);
+  await settle({width: 600, feedPosition: 'left'});
+  ok('post page, left: the back arrow stays in the window, the feed keeps its width', box(back).width === 32 && box(back).left >= 0 && near(box(main).width, 600) && near(box(leftNav).left, box(main).right + gap), [box(back).left, box(main).width, where()]);
+  await settle({feedPosition: 'right'});
+  ok('post page, right: the back arrow clears the sidebar', box(back).width === 32 && box(back).left >= box(side).right + gap - 1 && near(box(main).width, 600) && near(box(main).right, box(sub).right - pad), [box(back).left, box(side).right, box(main).width]);
+  back.remove(); post.style.position = '';
+  await settle({feedPosition: 'left'});
+  ok('...and other pages get no extra room', near(box(main).left, box(sub).left + pad), where());
+
   await settle({hideLeft: false, feedPosition: 'center'});
   ok('center again: the nav goes home', getComputedStyle(leftNav).left === '0px' && !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-w') && !html.style.getPropertyValue('--rf-nav-x'), [getComputedStyle(leftNav).left, html.className]);
   ok('...and the feed sits right of it, before its sidebar', box(main).left >= box(leftNav).right && near(box(side).left, box(main).right + gap), where());
