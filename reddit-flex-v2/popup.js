@@ -19,6 +19,7 @@
     for (const b of document.querySelectorAll('[data-type]')) b.classList.toggle('on', b.dataset.type === editType);
     $('width').value = shownWidth();
     $('commentSort').value = s.commentSort;
+    $('feedPosition').value = s.feedPosition;
     for (const [key, kind] of Object.entries(lists)) {
       // Never rewrite the box being typed in: normalizing would eat a fresh empty line.
       if (document.activeElement !== $(key)) $(key).value = s[key].join('\n');
@@ -55,6 +56,7 @@
   chrome.storage.local.get(READ_KEY).then(r => showReadCount(readCount(r[READ_KEY])));
   $('clearRead').addEventListener('click', () => chrome.storage.local.set({[READ_KEY]: {ids: []}}));
   $('commentSort').addEventListener('change', e => commit({commentSort: e.target.value}, true));
+  $('feedPosition').addEventListener('change', e => commit({feedPosition: e.target.value}, true));
   $('width').addEventListener('input', e => setWidth(Number(e.target.value)));
   $('width').addEventListener('change', e => setWidth(Number(e.target.value), true));
   for (const b of document.querySelectorAll('[data-width]')) b.addEventListener('click', () => setWidth(Number(b.dataset.width), true));

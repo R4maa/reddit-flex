@@ -1,4 +1,5 @@
-/* Feed column width: drag rails on both sides of the middle column. */
+/* Feed column width: drag rails on both sides of the middle column. Feed position: the column
+   can sit on the left or right, with the sidebars wrapped to its other side. */
 (() => {
   'use strict';
   if (window.top !== window || window.__rfLayout) return;
@@ -7,7 +8,7 @@
   const RF = RedditFlex;
   const html = document.documentElement;
   const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
-  let s = {...RF.defaults}, main = null, raf = 0, dragging = false, animTimer = 0, pillTimer = 0;
+  let s = {...RF.defaults}, main = null, nav = null, raf = 0, dragging = false, animTimer = 0, pillTimer = 0;
 
   const host = document.createElement('div');
   host.id = 'rf-layout-ui';
@@ -65,13 +66,42 @@
     const prev = s, first = !apply.done;
     apply.done = true;
     s = next;
-    if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(RF.widthFor(prev, type) - width()) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft)) animateLayout();
+    if (!first && !dragging && prev.enabled && s.enabled && (Math.abs(RF.widthFor(prev, type) - width()) > 60 || prev.hideRight !== s.hideRight || prev.hideLeft !== s.hideLeft || prev.feedPosition !== s.feedPosition)) animateLayout();
     html.classList.toggle('rf-enabled', s.enabled);
     html.classList.toggle('rf-hide-right', s.hideRight);
     html.classList.toggle('rf-hide-left', s.hideLeft);
+    html.classList.toggle('rf-pos-left', s.feedPosition === 'left');
+    html.classList.toggle('rf-pos-right', s.feedPosition === 'right');
     html.style.setProperty('--rf-right', s.hideRight ? '0px' : '340px');
     if (!dragging) setWidthVar(width());
     place();
+  }
+
+  // With the feed on one side, content.css leaves an empty column beside it (left: just after the
+  // feed; right: just before the right sidebar) and Reddit's left nav, which is position: fixed,
+  // is moved over it. Its width is measured, so a collapsed nav takes a narrower column.
+  function placeNav() {
+    const n = document.getElementById('flex-left-nav-container');
+    if (n !== nav) {
+      if (nav) ro.unobserve(nav);
+      nav = n;
+      if (nav) ro.observe(nav);
+    }
+    const w = s.enabled && s.feedPosition !== 'center' && !s.hideLeft && main && innerWidth >= 960 ? nav?.offsetWidth : 0;
+    html.classList.toggle('rf-nav-moved', !!w);
+    if (!w) {
+      html.style.removeProperty('--rf-nav-w');
+      html.style.removeProperty('--rf-nav-x');
+      html.style.removeProperty('--rf-feed-w');
+      return;
+    }
+    html.style.setProperty('--rf-nav-w', `${w}px`);
+    // Measured after the column is in place.
+    const r = main.getBoundingClientRect(), gap = parseFloat(getComputedStyle(main.parentElement).columnGap) || 0;
+    const side = s.hideRight ? null : document.getElementById('right-sidebar-container')?.getBoundingClientRect();
+    const x = s.feedPosition === 'left' ? r.right + gap : (side?.width ? side.left : r.left) - gap - w;
+    html.style.setProperty('--rf-nav-x', `${Math.round(x)}px`);
+    html.style.setProperty('--rf-feed-w', `${Math.round(r.width)}px`);
   }
 
   function place() {
@@ -85,10 +115,12 @@
         main = m;
         if (main) ro.observe(main);
       }
+      placeNav();
       const r = main?.getBoundingClientRect();
       const ok = s.enabled && r && r.width > 100 && innerWidth >= 960 && !document.fullscreenElement &&
         !document.querySelector('dialog[open]') && !RF.isCovered(main); // e.g. Reddit's image viewer
-      for (const rail of rails) rail.hidden = !ok;
+      // The edge pinned to the side of the page doesn't move, so it has no rail.
+      for (const rail of rails) rail.hidden = !ok || rail.dataset.side === s.feedPosition;
       if (!ok) return;
       const top = RF.headerBottom();
       const height = `${innerHeight - top}px`;

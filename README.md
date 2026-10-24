@@ -25,7 +25,7 @@
 <td width="33%" valign="top">
 
 ### Resizable feed
-Drag the orange rails beside the feed to make the middle column as narrow or as wide as you like. Double-click a rail to reset it. Presets, a width per page type (home, subreddit, post) and sidebar toggles are in the popup.
+Drag the orange rails beside the feed to make the middle column as narrow or as wide as you like. Double-click a rail to reset it. Presets, a width per page type (home, subreddit, post) and sidebar toggles are in the popup. On a wide screen, **Feed position** puts the feed on the left or right instead of in the middle, and the sidebars move to its other side.
 
 </td>
 <td width="33%" valign="top">
@@ -110,7 +110,7 @@ The same extension, packaged for Firefox. Download `reddit-flex-firefox-<version
 | Drag the **grip** under the comments | Change the comment box height (remembered; ↑ / ↓ when focused) |
 | Press **?** (with keyboard shortcuts on) | See every shortcut |
 
-Everything else (presets, sidebars, filters, read posts, clutter, sync, autoplay, preloading) is in the toolbar popup.
+Everything else (presets, feed position, sidebars, filters, read posts, clutter, sync, autoplay, preloading) is in the toolbar popup.
 
 ## Privacy
 
@@ -123,7 +123,7 @@ Everything else (presets, sidebars, filters, read posts, clutter, sync, autoplay
 
 - Reddit Flex works on the current Reddit site (www.reddit.com). Old Reddit isn't supported, and Reddit changes its markup from time to time.
 - Third-party embeds (YouTube and the like) may keep their own size limits.
-- Windows narrower than 960 px fall back to Reddit's single column, and the rails hide.
+- Windows narrower than 960 px fall back to Reddit's single column, and the rails hide. The feed is also centered again there, whatever Feed position says.
 
 ## Development
 

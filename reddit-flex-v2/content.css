@@ -24,6 +24,38 @@ html.rf-enabled.rf-hide-left #flex-left-nav-container { display: none !important
 html.rf-enabled.rf-hide-left .grid-container:has(#subgrid-container) { grid-template-columns: minmax(0, 1fr) !important; }
 html.rf-enabled.rf-hide-left #subgrid-container { grid-column: 1 / -1 !important; margin-inline: auto !important; }
 
+/* Feed position: the feed goes to one side and the sidebars wrap to the other (left: feed, nav,
+   sidebar; right: nav, sidebar, feed). The nav's own grid column goes; layout.js sets rf-nav-moved
+   and moves the nav (position: fixed) over an empty "nav" column beside the feed. */
+@media (min-width: 960px) {
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .grid-container:has(#subgrid-container) { grid-template-columns: minmax(0, 1fr) !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right):not(.rf-hide-left) #left-sidebar-container { display: contents !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) #subgrid-container { grid-column: 1 / -1 !important; }
+  html.rf-enabled.rf-pos-left #subgrid-container { margin-inline: 0 auto !important; }
+  html.rf-enabled.rf-pos-right #subgrid-container { margin-inline: auto 0 !important; }
+  html.rf-enabled.rf-nav-moved #subgrid-container { width: min(100%, calc(var(--rf-width, 900px) + var(--rf-right, 340px) + var(--rf-nav-w, 0px) + 72px)) !important; }
+  html.rf-enabled.rf-nav-moved #flex-left-nav-container { left: var(--rf-nav-x, 0px) !important; }
+  /* A subreddit's banner spans the feed and its sidebar; kept over the feed, the nav doesn't cut it. */
+  html.rf-enabled.rf-nav-moved #subgrid-container > .masthead { width: var(--rf-feed-w, 100%) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved #subgrid-container > .masthead { margin-left: auto !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) > #main-content { grid-area: feed !important; }
+  html.rf-enabled:is(.rf-pos-left, .rf-pos-right) .main-container:has(> #main-content) > #right-sidebar-container { grid-area: side !important; }
+  html.rf-enabled.rf-pos-left .main-container:has(> #main-content) {
+    justify-content: start !important;
+    grid-template: "feed side" / minmax(0, var(--rf-width, 900px)) minmax(0, 316px) !important;
+  }
+  html.rf-enabled.rf-pos-left.rf-nav-moved .main-container:has(> #main-content) { grid-template: "feed nav side" / minmax(0, var(--rf-width, 900px)) var(--rf-nav-w) minmax(0, 316px) !important; }
+  html.rf-enabled.rf-pos-left.rf-hide-right .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, var(--rf-width, 900px)) !important; }
+  html.rf-enabled.rf-pos-left.rf-nav-moved.rf-hide-right .main-container:has(> #main-content) { grid-template: "feed nav" / minmax(0, var(--rf-width, 900px)) var(--rf-nav-w) !important; }
+  html.rf-enabled.rf-pos-right .main-container:has(> #main-content) {
+    justify-content: end !important;
+    grid-template: "side feed" / minmax(0, 316px) minmax(0, var(--rf-width, 900px)) !important;
+  }
+  html.rf-enabled.rf-pos-right.rf-nav-moved .main-container:has(> #main-content) { grid-template: "nav side feed" / var(--rf-nav-w) minmax(0, 316px) minmax(0, var(--rf-width, 900px)) !important; }
+  html.rf-enabled.rf-pos-right.rf-hide-right .main-container:has(> #main-content) { grid-template: "feed" / minmax(0, var(--rf-width, 900px)) !important; }
+  html.rf-enabled.rf-pos-right.rf-nav-moved.rf-hide-right .main-container:has(> #main-content) { grid-template: "nav feed" / var(--rf-nav-w) minmax(0, var(--rf-width, 900px)) !important; }
+}
+
 /* Presets, double-click reset and sidebar toggles glide instead of jumping. */
 html.rf-animate #subgrid-container { transition: width .32s cubic-bezier(.22, .8, .24, 1) !important; }
 html.rf-animate .main-container:has(> #main-content) { transition: grid-template-columns .32s cubic-bezier(.22, .8, .24, 1) !important; }

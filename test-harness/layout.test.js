@@ -96,6 +96,57 @@ window.__lyTest = async () => {
   await nav('/r/pics/');
   ok('...on every page type', cssWidth() === 820);
 
+  // 6. Feed position: the feed on one side, the sidebars wrapped to the other
+  ok('the feed is centered by default', RF.defaults.feedPosition === 'center' && RF.normalize({feedPosition: 'top'}).feedPosition === 'center' && RF.normalize({feedPosition: 'left'}).feedPosition === 'left');
+  const leftNav = document.getElementById('flex-left-nav-container'), side = document.getElementById('right-sidebar-container');
+  const sub = document.getElementById('subgrid-container');
+  const box = el => el.getBoundingClientRect();
+  const frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  const settle = async patch => { await set(patch); await sleep(450); await frames(); }; // past the glide
+  const gap = parseFloat(getComputedStyle(main.parentElement).columnGap), pad = parseFloat(getComputedStyle(sub).paddingLeft);
+  const near = (a, b) => Math.abs(a - b) <= 1.5;
+  const apart = (...els) => els.every((a, i) => els.slice(i + 1).every(b => box(a).right <= box(b).left + 1 || box(b).right <= box(a).left + 1));
+  const where = () => ({main: [box(main).left, box(main).right], nav: [box(leftNav).left, box(leftNav).right], side: [box(side).left, box(side).right]});
+  await nav('/r/pics/');
+  await settle({widthPerPage: false, width: 600, hideLeft: false, hideRight: false, feedPosition: 'left'});
+  ok('left: the feed starts at the left edge', near(box(main).left, box(sub).left + pad) && near(box(sub).left, 0), where());
+  ok('...the nav comes next', near(box(leftNav).left, box(main).right + gap) && html.classList.contains('rf-nav-moved'), where());
+  ok('...then the right sidebar', near(box(side).left, box(leftNav).right + gap), where());
+  ok('...and the pinned edge has no rail', rails[0].hidden, rails.map(r => r.hidden));
+  leftNav.style.width = '72px'; await frames(); await frames();
+  ok('a collapsed nav takes a narrower column', html.style.getPropertyValue('--rf-nav-w') === '72px' && near(box(side).left, box(leftNav).right + gap), where());
+  leftNav.style.width = '';
+  await frames(); await frames();
+  // Dragging the right rail still resizes, and the nav follows the feed's edge.
+  const rail1 = rails[1];
+  rail1.hidden = false;
+  const r1 = box(main);
+  rail1.dispatchEvent(new PointerEvent('pointerdown', {...po, clientX: r1.right + 8, clientY: 300}));
+  rail1.dispatchEvent(new PointerEvent('pointermove', {...po, clientX: r1.right + 108, clientY: 300}));
+  rail1.dispatchEvent(new PointerEvent('pointerup', {...po, clientX: r1.right + 108, clientY: 300}));
+  await sleep(80); await frames();
+  st = await stored();
+  ok('left: a rail drag resizes the feed', st.width >= 690 && st.width <= 710 && near(box(main).width, st.width), [st.width, box(main).width]);
+  ok('...and the nav follows it', near(box(leftNav).left, box(main).right + gap), where());
+
+  await settle({width: 600, feedPosition: 'right'});
+  ok('right: the feed ends at the right edge', near(box(main).right, box(sub).right - pad) && near(box(sub).right, html.clientWidth), [where(), html.clientWidth]);
+  ok('...after the nav and the right sidebar', near(box(side).right + gap, box(main).left) && near(box(leftNav).right + gap, box(side).left), where());
+  ok('...and the pinned edge has no rail', rails[1].hidden, rails.map(r => r.hidden));
+
+  await settle({hideRight: true});
+  ok('right, no right sidebar: nav then feed', near(box(leftNav).right + gap, box(main).left) && near(box(main).right, box(sub).right - pad), where());
+  await settle({feedPosition: 'left'});
+  ok('left, no right sidebar: feed then nav', near(box(leftNav).left, box(main).right + gap) && near(box(main).left, pad), where());
+  await settle({hideRight: false, hideLeft: true});
+  ok('left, no nav: feed then sidebar, nothing moved', !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-x') && near(box(side).left, box(main).right + gap) && near(box(main).left, pad), where());
+  await settle({feedPosition: 'right'});
+  ok('right, no nav: sidebar then feed', near(box(side).right + gap, box(main).left) && apart(main, side), where());
+
+  await settle({hideLeft: false, feedPosition: 'center'});
+  ok('center again: the nav goes home', getComputedStyle(leftNav).left === '0px' && !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-w') && !html.style.getPropertyValue('--rf-nav-x'), [getComputedStyle(leftNav).left, html.className]);
+  ok('...and the feed sits right of it, before its sidebar', box(main).left >= box(leftNav).right && near(box(side).left, box(main).right + gap), where());
+
   // Clean up
   await nav(null);
   await RF.save(start); await sleep(80);
