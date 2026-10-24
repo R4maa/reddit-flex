@@ -3,7 +3,7 @@
 // Writes dist/firefox/ (to load as a temporary add-on) and reddit-flex-firefox-<version>.zip (for AMO).
 // usage: node test-harness/tools/build-firefox.mjs
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync, crc32 } from 'node:zlib';
@@ -13,10 +13,15 @@ const SRC = 'reddit-flex-v2';
 const out = join(root, 'dist', 'firefox');
 const GECKO_ID = 'reddit-flex@r4maa';
 
-// The tracked files only, as git archive packs the Chrome zip.
-const files = execFileSync('git', ['ls-files', SRC], {cwd: root, encoding: 'utf8'})
+// The tracked files only, as Git stores them (LF line endings), so the zip is the same on every
+// machine, not a checkout's copy (CRLF with core.autocrlf on Windows). The Chrome zip matches:
+// `git -c core.autocrlf=false archive` (see ci.yml). Uncommitted changes are included:
+// `git stash create` snapshots them without touching anything, and prints nothing when there are none.
+const git = (args, opts) => execFileSync('git', args, {cwd: root, maxBuffer: 64 << 20, ...opts});
+const commit = git(['stash', 'create'], {encoding: 'utf8'}).trim() || 'HEAD';
+const files = git(['ls-tree', '-r', '--name-only', commit, SRC], {encoding: 'utf8'})
   .split('\n').filter(Boolean).map(f => f.slice(SRC.length + 1));
-const contents = new Map(files.map(f => [f, readFileSync(join(root, SRC, f))]));
+const contents = new Map(files.map(f => [f, git(['cat-file', 'blob', `${commit}:${SRC}/${f}`])]));
 
 const m = JSON.parse(contents.get('manifest.json'));
 delete m.minimum_chrome_version;

@@ -26,7 +26,8 @@ jobs:
       - name: Store zip
         run: |
           version=$(node -p "require('./reddit-flex-v2/manifest.json').version")
-          git archive --format=zip -o "reddit-flex-$version.zip" HEAD:reddit-flex-v2
+          # As Git stores the files (LF), like build-firefox.mjs, whatever the machine's autocrlf.
+          git -c core.autocrlf=false archive --format=zip -o "reddit-flex-$version.zip" HEAD:reddit-flex-v2
           echo "ZIP=reddit-flex-$version.zip" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4
         with:
