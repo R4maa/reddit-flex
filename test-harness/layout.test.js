@@ -177,6 +177,16 @@ window.__lyTest = async () => {
   dispatchEvent(new Event('resize')); await frames(); await frames();
   ok('...and the sidebar column comes back with the sidebar', !html.classList.contains('rf-no-side') && near(box(leftNav).right + gap, box(side).left) && near(box(side).right + gap, box(main).left), where());
 
+  // A page with Reddit's grid but no feed (#main-content) is left as Reddit lays it out.
+  await settle({feedPosition: 'left'});
+  const stub = document.createElement('div');
+  main.replaceWith(stub);
+  dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('no feed on the page: nothing is rearranged, and nothing slides under the nav', !html.classList.contains('rf-nav-moved') && getComputedStyle(leftNav).left === '0px' && box(sub).left >= box(leftNav).right - 1, [html.className, box(sub).left, box(leftNav).right]);
+  stub.replaceWith(main);
+  dispatchEvent(new Event('resize')); await frames(); await frames();
+  ok('...and the feed goes to its side again when it is back', html.classList.contains('rf-nav-moved') && near(box(main).left, box(sub).left + pad) && near(box(leftNav).left, box(main).right + gap), where());
+
   await settle({hideLeft: false, feedPosition: 'center'});
   ok('center again: the nav goes home', getComputedStyle(leftNav).left === '0px' && !html.classList.contains('rf-nav-moved') && !html.style.getPropertyValue('--rf-nav-w') && !html.style.getPropertyValue('--rf-nav-x'), [getComputedStyle(leftNav).left, html.className]);
   ok('...and the feed sits right of it, before its sidebar', box(main).left >= box(leftNav).right && near(box(side).left, box(main).right + gap), where());
