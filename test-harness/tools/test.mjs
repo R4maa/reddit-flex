@@ -20,7 +20,11 @@ const groups = [
 let failed = 0;
 const outputs = await Promise.all(groups.map(async args => {
   try { return (await run('node', [join(tools, runner), ...args], {timeout: 900000})).stdout; }
-  catch (e) { failed++; return e.stdout || `ERROR ${args.slice(1).join(' ')}: ${e.message}`; }
+  catch (e) {
+    // (A suite that hangs prints nothing of its own, so say which one and why.)
+    failed++;
+    return `${e.stdout || ''}\nERROR ${args.slice(1).join(' ')}: ${e.killed ? 'timed out after 15 minutes' : e.message.split('\n')[0]}`;
+  }
 }));
 for (const line of outputs.join('\n').split('\n')) {
   const m = /^(__\w+) (.*)$/.exec(line);
