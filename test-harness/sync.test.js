@@ -209,6 +209,20 @@ window.__syTest = async () => {
     ok('messages from other extensions are ignored', r2.ok === false && A.local().width === 710);
   }
 
+  // 3b. Turning on before the worker's first write, whatever the date. Timers take the delay as a
+  // 32-bit number: waiting "until the next write" from 0 is -Date.now() ms, which on some dates
+  // (2026-10-27 to 11-21, and every ~50 days) wraps around to days. Pin the clock to such a date.
+  {
+    const realNow = Date.now, M = 2 ** 32;
+    const shift = (((-realNow()) % M + M) % M - 2 ** 30 + M) % M; // makes -Date.now() wrap to 2^30 ms (12 days)
+    Date.now = () => realNow() + shift;
+    try {
+      const A = computer({});
+      const r = await Promise.race([A.setSync(true), sleep(2000).then(() => 'still waiting after 2 s')]);
+      ok('turning sync on is not held up by the date (timer delays wrap at 32 bits)', r?.ok && r.result === 'uploaded', r);
+    } finally { Date.now = realNow; }
+  }
+
   // 4. Turning on uploads; writes are spaced and collapse; only settings sync
   {
     const A = computer(slow, {local: {redditFlex: RF.normalize({...start, width: 720, filterKeywords: longKw}), redditFlexRead: {t3_a: 1}, redditFlexFloat: {x: 1}}});

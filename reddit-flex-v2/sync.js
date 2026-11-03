@@ -81,7 +81,9 @@
   function start(chrome, {gap = GAP, retry = RETRY} = {}) {
     const local = chrome.storage.local, sync = chrome.storage.sync;
     const json = v => JSON.stringify(v);
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    // (Clamped: timers take the delay as a 32-bit number, so a big negative one, like 0 - Date.now()
+    // before the first write, can wrap around to days.)
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, Math.max(0, ms)));
 
     // One job at a time, in order.
     let queue = Promise.resolve();
