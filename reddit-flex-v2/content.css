@@ -115,6 +115,8 @@ html.rf-dragging iframe { pointer-events: none !important; }
   max-width: none !important;
   aspect-ratio: auto !important;
 }
+/* Reddit can wrap the aspect-ratio box in plain divs; without a height they collapse it to 0. */
+[data-rf-sized] div:has([data-aspect-ratio-container]) { height: 100% !important; max-height: none !important; }
 [data-rf-sized] > a { display: block !important; width: 100% !important; height: 100% !important; }
 [data-rf-sized] img:not([role="presentation"]) { object-fit: contain !important; max-height: 100% !important; }
 [data-rf-sized] > a > img, [data-rf-sized] > img { width: 100% !important; height: 100% !important; }

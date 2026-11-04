@@ -321,6 +321,23 @@ window.__vdTest = async () => {
   ok('(released again)', pF.hasAttribute('autoplay'));
   await set({autoplay: true});
 
+  // A single image in Reddit's current markup: the aspect-ratio box sits inside a plain wrapper div.
+  const imgArt = document.createElement('article');
+  imgArt.innerHTML = `<shreddit-post id="t3_pimg" post-type="image" view-context="SubredditFeed" permalink="/r/test/comments/pimg/i/">
+    <div slot="post-media-container" style="display:block;width:100%"><div style="position:relative;overflow:hidden">
+      <div data-aspect-ratio-container style="position:relative;display:block;width:100%;overflow:hidden;aspect-ratio:1;min-height:220px;max-height:540px">
+        <div style="position:absolute;inset:0;width:100%;height:100%"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><rect width='400' height='400' fill='%23c46'/></svg>" style="position:relative;display:block;width:100%;height:100%"></div>
+      </div></div></div></shreddit-post>`;
+  main.append(imgArt);
+  const imgSlot = imgArt.querySelector('[slot]'), img = imgArt.querySelector('img');
+  imgSlot.scrollIntoView({block: 'center'}); await sleep(100);
+  const ia = imgSlot.getBoundingClientRect();
+  imgSlot.dispatchEvent(new WheelEvent('wheel', {deltaY: -300, ctrlKey: true, bubbles: true, composed: true, cancelable: true, clientX: ia.left + ia.width / 2, clientY: ia.top + ia.height / 2}));
+  await sleep(100);
+  const ib = imgSlot.getBoundingClientRect(), ir = img.getBoundingClientRect();
+  ok('a resized image inside a wrapper div grows and stays visible', imgSlot.hasAttribute('data-rf-sized') && ib.height > ia.height + 20 && Math.abs(ir.height - ib.height) < 2, {slot: [ia.height, ib.height], img: ir.height});
+  imgArt.remove();
+
   // Clean up
   for (const id of ['pv1', 'pv2', 'pv3', 'pa', 'pb', 'pc', 'pd', 'pe', 'pf']) document.getElementById(`t3_${id}`)?.closest('article')?.remove();
   if (hadRuntime) chrome.runtime = hadRuntime; else delete chrome.runtime;
