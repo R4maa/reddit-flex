@@ -16,7 +16,7 @@ export async function launch({prefs = {}, width = 1400, height = 900, headless =
   const profile = mkdtempSync(join(tmpdir(), 'rf-firefox-'));
   writeFileSync(join(profile, 'user.js'), Object.entries(prefs).map(([k, v]) => `user_pref(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join('\n') + '\n');
   const ff = spawn(firefoxPath(), [...(headless ? ['--headless'] : []), '--no-remote', '--remote-debugging-port=0', '--remote-allow-system-access', '--profile', profile, `--width=${width}`, `--height=${height}`, 'about:blank'],
-    {stdio: ['ignore', 'ignore', 'pipe']});
+    {stdio: ['ignore', 'ignore', 'pipe'], env: {...process.env, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: '1'}});  // Firefox 159+ wants the env var too
   const wsUrl = await new Promise((res, rej) => {
     let err = '';
     const t = setTimeout(() => rej(new Error(`Firefox did not start: ${err.slice(-500)}`)), 60000);
